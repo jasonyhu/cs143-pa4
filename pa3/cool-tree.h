@@ -159,6 +159,12 @@ public:
       filename = a4;
    }
    Class_ copy_Class_();
+   Symbol get_name() {
+      return name;
+   }
+   Symbol get_parent() {
+      return parent;
+   }
    void dump(ostream& stream, int n);
 
 #ifdef Class__SHARED_EXTRAS

@@ -16,6 +16,17 @@ class ClassTable;
 typedef ClassTable *ClassTableP;
 
 
+class InheritanceNode {
+  private:
+    Symbol parent;
+    Symbol name;
+  public:
+    InheritanceNode(class__class class_) {
+      parent = class_->get_parent();
+      name = class_->name;
+    };
+}
+
 // This is a structure that may be used to contain the semantic
 // information such as the inheritance graph.  You may use it or not as
 // you like: it is only here to provide a container for the supplied
@@ -28,6 +39,8 @@ private:
 
 public:
   ClassTable(Classes);
+  Classes basic_classes;
+  SymbolTable<Symbol, Class_> map = new SymbolTable<Symbol, Class_>();
   int errors() { return semant_errors; }
   std::ostream& semant_error();
   std::ostream& semant_error(Class_ c);

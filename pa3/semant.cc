@@ -87,6 +87,30 @@ static void initialize_constants(void) {
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   /* Fill this in */
+  // what do i do with these basic classes
+  install_basic_classes();
+  ClassTable->enterscope();
+  for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+    Class_ classtest = classes->nth(i); 
+    Symbol name = classtest->get_name();
+    Symbol parent = classtest->get_parent();
+    if (name == "IO" || name == "Int" || name == "Str" || name == "Bool" || parent == "Int" || parent == "Str" || parent == "Bool") {
+      ClassTable->semant_error(classtest);
+    }
+    ClassTable->addid(name, new InheritanceNode(classtest););
+  }
+
+  // dfs: check cycle
+  std::set<InheritanceNode> visited;
+  for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+    if (!visited.find(classes->nth[i])) {
+      visited.insert(InheritanceNode(classtest));
+    }
+    visited.push_back(classes->nth[i]);
+
+  }
+
+
 }
 
 void ClassTable::install_basic_classes() {
@@ -102,7 +126,6 @@ void ClassTable::install_basic_classes() {
   // stored in local variables.  You will want to do something
   // with those variables at the end of this method to make this
   // code meaningful.
-
 
   //
   // The Object class has no parent class. Its methods are
@@ -193,6 +216,25 @@ void ClassTable::install_basic_classes() {
 				   Str,
 				   no_expr()))),
 	     filename);
+  map->enterscope();
+  map->addid("Str", Str_class);
+  map->addid("Bool", Bool_class);
+  map->addid("Int", Int_class);
+  map->addid("IO", IO_class);
+  map->addid("Object", Object_class);
+
+
+  // basic_classes = 
+  //   append_classes(
+  //   append_classes(
+  //   append_classes(
+  //     single_classes(Int_class), 
+  //     single_classes(IO_class)), 
+  //     single_classes(Object_class)), 
+  //   append_classes(
+  //     single_classes(Str_class), 
+  //     single_classes(Bool_class)));
+
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -244,13 +286,14 @@ ostream& ClassTable::semant_error()
  *   to build mycoolc.
  */
 void program_class::semant() {
-   initialize_constants();
+  initialize_constants();
 
     /* ClassTable constructor may do some semantic analysis */
-   ClassTableP classtable = new ClassTable(classes);
 
-   if (classtable->errors()) {
-      cerr << "Compilation halted due to static semantic errors." << endl;
-      exit(1);
-   }
+  ClassTableP classtable = new ClassTable(classes);
+
+  if (classtable->errors()) {
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
+  }
 }
