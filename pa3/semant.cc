@@ -94,7 +94,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Class_ classtest = classes->nth(i); 
     Symbol name = classtest->get_name();
     Symbol parent = classtest->get_parent();
-    if (name == "IO" || name == "Int" || name == "Str" || name == "Bool" || parent == "Int" || parent == "Str" || parent == "Bool") {
+    if (name->get_string() == "IO" || name == "Int" || name == "Str" || name == "Bool" || parent == "Int" || parent == "Str" || parent == "Bool") {
       ClassTable->semant_error(classtest);
     }
     ClassTable->addid(name, new InheritanceNode(classtest););
@@ -296,4 +296,10 @@ void program_class::semant() {
     cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
   }
+
+  // use dfs/bfs to go through each class + have info that we need (ex: attributes)
+  // traverse through the AST of each class and do the type checking
+  // type checking : assign types to each node of the AST
+  // figure out the type of the expression/feature in the AST
+  // 
 }

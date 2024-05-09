@@ -19,11 +19,9 @@ typedef ClassTable *ClassTableP;
 class InheritanceNode {
   private:
     Symbol parent;
-    Symbol name;
   public:
     InheritanceNode(class__class class_) {
       parent = class_->get_parent();
-      name = class_->name;
     };
 }
 
