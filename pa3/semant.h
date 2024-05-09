@@ -20,10 +20,13 @@ class InheritanceNode {
   private:
     Symbol parent;
   public:
-    InheritanceNode(class__class class_) {
+    InheritanceNode(Class_ class_) {
       parent = class_->get_parent();
     };
-}
+    bool operator<(const InheritanceNode& other) const {
+      return this->parent < other.parent;
+    }
+};
 
 // This is a structure that may be used to contain the semantic
 // information such as the inheritance graph.  You may use it or not as
@@ -38,7 +41,7 @@ private:
 public:
   ClassTable(Classes);
   Classes basic_classes;
-  SymbolTable<Symbol, Class_> map = new SymbolTable<Symbol, Class_>();
+  SymbolTable<Symbol, Class_> *map = new SymbolTable<Symbol, Class_>();
   int errors() { return semant_errors; }
   std::ostream& semant_error();
   std::ostream& semant_error(Class_ c);

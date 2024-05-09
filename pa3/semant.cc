@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <set>
 #include "semant.h"
 #include "utilities.h"
 
@@ -89,24 +90,23 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   /* Fill this in */
   // what do i do with these basic classes
   install_basic_classes();
-  ClassTable->enterscope();
+  enterscope();
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    Class_ classtest = classes->nth(i); 
-    Symbol name = classtest->get_name();
-    Symbol parent = classtest->get_parent();
-    if (name->get_string() == "IO" || name == "Int" || name == "Str" || name == "Bool" || parent == "Int" || parent == "Str" || parent == "Bool") {
-      ClassTable->semant_error(classtest);
+    Class_ class_ = classes->nth(i); 
+    Symbol name = class_->get_name();
+    Symbol parent = class_->get_parent();
+    if (name == IO || name == Int || name == Str || name == Bool || parent == Int || parent == Str || parent == Bool) {
+      semant_error(class_);
     }
-    ClassTable->addid(name, new InheritanceNode(classtest););
+    addid(name, new InheritanceNode(class_));
   }
 
   // dfs: check cycle
   std::set<InheritanceNode> visited;
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    if (!visited.find(classes->nth[i])) {
-      visited.insert(InheritanceNode(classtest));
+    if (visited.find(classes->nth(i)) == visited.end()) {
+      visited.insert(classes->nth(i));
     }
-    visited.push_back(classes->nth[i]);
 
   }
 
@@ -217,11 +217,11 @@ void ClassTable::install_basic_classes() {
 				   no_expr()))),
 	     filename);
   map->enterscope();
-  map->addid("Str", Str_class);
-  map->addid("Bool", Bool_class);
-  map->addid("Int", Int_class);
-  map->addid("IO", IO_class);
-  map->addid("Object", Object_class);
+  map->addid(Str, &Str_class);
+  map->addid(Bool, &Bool_class);
+  map->addid(Int, &Int_class);
+  map->addid(IO, &IO_class);
+  map->addid(Object, &Object_class);
 
 
   // basic_classes = 
