@@ -89,28 +89,43 @@ static void initialize_constants(void) {
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   /* Fill this in */
   // what do i do with these basic classes
-  install_basic_classes();
   enterscope();
+  install_basic_classes();
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
-    if (name == IO || name == Int || name == Str || name == Bool || parent == Int || parent == Str || parent == Bool) {
-      semant_error(class_);
+    // TODO: what does redefining mean?
+    if (name == IO || name == Int || name == Str || name == Bool) {
+      semant_error(class_) << "Class " << class_->get_name()->get_string() << " cannot redefine class " << name->get_string() << ".\n";
+    }
+    if (parent == Int || parent == Str || parent == Bool) {
+      semant_error(class_) << "Class " << class_->get_name()->get_string() << " cannot inherit class " << parent->get_string() << ".\n";
     }
     addid(name, new InheritanceNode(class_));
   }
 
   // dfs: check cycle
-  std::set<InheritanceNode> visited;
+  std::set<Class_> visited;
+  // dfs: go through all nodes and iterate through each parent, adding them to the visited set
+  // if a node is already in visited, we've found a cycle
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    if (visited.find(classes->nth(i)) == visited.end()) {
-      visited.insert(classes->nth(i));
+    Class_ cur = classes->nth(i);
+    std::set<Class_> forest;
+    if (visited.find(cur) == visited.end()) {
+      while (cur != lookup(Object)->get_class()) {
+        visited.insert(cur);
+        forest.insert(cur);
+        cur = lookup(cur->get_parent())->get_class();
+        if (forest.find(cur) != forest.end()) {
+          semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.";
+        }
+        if (visited.find(cur) != visited.end()) {
+          break;
+        }
+      }
     }
-
   }
-
-
 }
 
 void ClassTable::install_basic_classes() {
@@ -216,12 +231,12 @@ void ClassTable::install_basic_classes() {
 				   Str,
 				   no_expr()))),
 	     filename);
-  map->enterscope();
-  map->addid(Str, &Str_class);
-  map->addid(Bool, &Bool_class);
-  map->addid(Int, &Int_class);
-  map->addid(IO, &IO_class);
-  map->addid(Object, &Object_class);
+  enterscope();
+  addid(Str, new InheritanceNode(Str_class));
+  addid(Bool, new InheritanceNode(Bool_class));
+  addid(Int, new InheritanceNode(Int_class));
+  addid(IO, new InheritanceNode(IO_class));
+  addid(Object, new InheritanceNode(Object_class));
 
 
   // basic_classes = 
