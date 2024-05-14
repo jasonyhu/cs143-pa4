@@ -86,6 +86,11 @@ static void initialize_constants(void) {
   val         = idtable.add_string("_val");
 }
 
+/* Inheritance Node: basic functions */
+Symbol InheritanceNode::get_parent() { return parent; };
+Features InheritanceNode::get_features() { return features; };
+Class_ InheritanceNode::get_class() { return thisclass_; };
+
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   /* Fill this in */
   // what do i do with these basic classes
@@ -96,31 +101,51 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
     // TODO: what does redefining mean?
-    if (name == IO || name == Int || name == Str || name == Bool) {
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " cannot redefine class " << name->get_string() << ".\n";
+    if (name == IO || name == Int || name == Str || name == Bool || name == Object) {
+      semant_error(class_) << "Redefinition of basic class " << name->get_string() << ".\n";
+    } else if (lookup(name) != NULL) {
+      semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
     }
     if (parent == Int || parent == Str || parent == Bool) {
       semant_error(class_) << "Class " << class_->get_name()->get_string() << " cannot inherit class " << parent->get_string() << ".\n";
     }
     addid(name, new InheritanceNode(class_));
   }
-
+  // CHECK FOR INHERITANCE FROM UNDEFINED CLASSES
+  for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+    Class_ class_ = classes->nth(i); 
+    Symbol name = class_->get_name();
+    Symbol parent = class_->get_parent();
+    // TODO: what does redefining mean?
+    if (lookup(parent) == NULL) {
+      semant_error(class_) << "Class " << class_->get_name()->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
+    }
+  }
+  if (errors() > 0) {
+    return;
+  }
   // dfs: check cycle
   std::set<Class_> visited;
   // dfs: go through all nodes and iterate through each parent, adding them to the visited set
   // if a node is already in visited, we've found a cycle
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    Class_ cur = classes->nth(i);
+    Class_ cur = classes->nth(i); 
     std::set<Class_> forest;
     if (visited.find(cur) == visited.end()) {
       while (cur != lookup(Object)->get_class()) {
         visited.insert(cur);
         forest.insert(cur);
+        // issue: lookup doesn't work
         cur = lookup(cur->get_parent())->get_class();
         if (forest.find(cur) != forest.end()) {
-          semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.";
-        }
-        if (visited.find(cur) != visited.end()) {
+          Class_ benchmark = cur;
+          while (true) {
+            semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.\n";
+            cur = lookup(cur->get_parent())->get_class();
+            if (cur == benchmark) {
+              break;
+            }
+          }
           break;
         }
       }
@@ -231,7 +256,6 @@ void ClassTable::install_basic_classes() {
 				   Str,
 				   no_expr()))),
 	     filename);
-  enterscope();
   addid(Str, new InheritanceNode(Str_class));
   addid(Bool, new InheritanceNode(Bool_class));
   addid(Int, new InheritanceNode(Int_class));

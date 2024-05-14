@@ -1,0 +1,141 @@
+#1
+_program
+  #1
+  _class
+    C
+    B
+    "bad.cl"
+    (
+    #2
+    _attr
+      a
+      Int
+      #0
+      _no_expr
+      : _no_type
+    #3
+    _attr
+      b
+      Bool
+      #0
+      _no_expr
+      : _no_type
+    #4
+    _method
+      init
+      #4
+      _formal
+        x
+        Int
+      #4
+      _formal
+        y
+        Bool
+      C
+      #5
+      _block
+        #6
+        _assign
+          a
+          #6
+          _object
+            x
+          : _no_type
+        : _no_type
+        #7
+        _assign
+          b
+          #7
+          _object
+            y
+          : _no_type
+        : _no_type
+        #8
+        _object
+          self
+        : _no_type
+      : _no_type
+    )
+  #13
+  _class
+    B
+    C
+    "bad.cl"
+    (
+    )
+  #17
+  _class
+    Main
+    Object
+    "bad.cl"
+    (
+    #18
+    _method
+      main
+      C
+      #19
+      _block
+        #20
+        _dispatch
+          #20
+          _new
+            C
+          : _no_type
+          init
+          (
+          #20
+          _int
+            1
+          : _no_type
+          #20
+          _int
+            1
+          : _no_type
+          )
+        : _no_type
+        #21
+        _dispatch
+          #21
+          _new
+            C
+          : _no_type
+          init
+          (
+          #21
+          _int
+            1
+          : _no_type
+          #21
+          _bool
+            1
+          : _no_type
+          #21
+          _int
+            3
+          : _no_type
+          )
+        : _no_type
+        #22
+        _dispatch
+          #22
+          _new
+            C
+          : _no_type
+          iinit
+          (
+          #22
+          _int
+            1
+          : _no_type
+          #22
+          _bool
+            1
+          : _no_type
+          )
+        : _no_type
+        #23
+        _new
+          C
+        : _no_type
+      : _no_type
+    )

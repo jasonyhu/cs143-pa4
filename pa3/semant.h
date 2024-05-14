@@ -20,19 +20,19 @@ class InheritanceNode {
   private:
     Symbol parent;
     Features features;
-    Class_ class_;
+    Class_ thisclass_;
   public:
     InheritanceNode(Class_ class_) {
       parent = class_->get_parent();
       features = class_->get_features();
-      class_ = class_;
+      thisclass_ = class_;
     };
     bool operator<(const InheritanceNode& other) const {
       return this->parent < other.parent;
     }
-    Symbol get_parent() { return parent; }
-    Features get_features() { return features; }
-    Class_ get_class() { return class_; }
+    Symbol get_parent();
+    Features get_features();
+    Class_ get_class();
 };
 
 // This is a structure that may be used to contain the semantic
