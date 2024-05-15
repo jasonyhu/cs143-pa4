@@ -96,6 +96,13 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   // what do i do with these basic classes
   enterscope();
   install_basic_classes();
+
+  /* 
+   * Loops through all classes in the class tree and adds them to a class table.
+
+   * Throws an error if a class redefines a basic class, if a class redefines an existing class, 
+   * or if a class inherits an uninheritable class.
+  */
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
@@ -110,12 +117,15 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     }
     addid(name, new InheritanceNode(class_));
   }
-  // CHECK FOR INHERITANCE FROM UNDEFINED CLASSES
+  
+  // Throws error for illegal class redefinition and for inheritance from undefined classes.
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
-    // TODO: what does redefining mean?
+    if (lookup(name) != NULL) { // jason added this to resolve the "TODO: what does redefining mean?"
+      semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
+    }
     if (lookup(parent) == NULL) {
       semant_error(class_) << "Class " << class_->get_name()->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
     }
@@ -123,7 +133,9 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   if (errors() > 0) {
     return;
   }
-  // dfs: check cycle
+  
+  
+  // performs a dfs search to check for illegal inheritance cycles
   std::set<Class_> visited;
   // dfs: go through all nodes and iterate through each parent, adding them to the visited set
   // if a node is already in visited, we've found a cycle
@@ -131,17 +143,17 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Class_ cur = classes->nth(i); 
     std::set<Class_> forest;
     if (visited.find(cur) == visited.end()) {
+      visited.insert(cur);
       while (cur != lookup(Object)->get_class()) {
-        visited.insert(cur);
         forest.insert(cur);
         // issue: lookup doesn't work
         cur = lookup(cur->get_parent())->get_class();
-        if (forest.find(cur) != forest.end()) {
-          Class_ benchmark = cur;
+        if (forest.find(cur) != forest.end()) {  // error found
+          Class_ loop_start = cur;
           while (true) {
             semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.\n";
             cur = lookup(cur->get_parent())->get_class();
-            if (cur == benchmark) {
+            if (cur == loop_start) {
               break;
             }
           }
