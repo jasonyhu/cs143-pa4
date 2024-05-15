@@ -41,3 +41,5 @@ Class Main {
 	 }
 	};
 };
+
+-- what if a class tries to inherit itself?
