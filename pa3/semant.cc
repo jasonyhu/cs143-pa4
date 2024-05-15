@@ -100,7 +100,6 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
-    // TODO: what does redefining mean?
     if (name == IO || name == Int || name == Str || name == Bool || name == Object) {
       semant_error(class_) << "Redefinition of basic class " << name->get_string() << ".\n";
     } else if (lookup(name) != NULL) {
@@ -309,6 +308,142 @@ ostream& ClassTable::semant_error()
     return error_stream;
 }
 
+void traverse_class(&ClassTableP table, Class_ cur) {
+  Features_ features = cur->get_features();
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    // TODO: check if feature is attr or method
+    return;
+  }
+}
+
+// void traverse_feature(Feature_ feature) {
+//   Features_ features = cur->get_features();
+//   for (int i = features->first(); features->more(i); i = features->next(i)) {
+//     return;
+//   }
+// }
+
+void traverse_method(Feature_ feature) {
+  Formals_ formals = cur->get_formals();
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    return;
+  }
+}
+
+void traverse_attr(Feature_ feature) {
+  Features_ features = cur->get_features();
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    return;
+  }
+}
+
+void traverse_formal(Formal_ formal) {
+  Features_ features = cur->get_features();
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    return;
+  }
+}
+
+void traverse_branch(Case_ case_) {
+
+}
+
+void traverse_expression(Expression_ expression) {
+  
+}
+
+void traverse_assign(Case_ case_) {
+
+}
+
+void traverse_static_dispatch(Case_ case_) {
+
+}
+
+void traverse_dispatch() {
+
+}
+
+void traverse_cond() {
+
+}
+
+void traverse_loop() {
+
+}
+
+void traverse_typcase() {
+
+}
+
+void traverse_block() {
+
+}
+
+void traverse_let() {
+
+}
+
+void traverse_plus() {
+
+}
+
+void traverse_sub() {
+
+}
+
+void traverse_mul() {
+
+}
+
+void traverse_divide() {
+
+}
+
+void traverse_neg() {
+
+}
+
+void traverse_lt() {
+
+}
+
+void traverse_eq() {
+
+}
+
+void traverse_leq() {
+
+}
+
+void traverse_comp() {
+
+}
+
+void traverse_int_const() {
+
+}
+
+void traverse_bool_const() {
+
+}
+
+void traverse_string_const() {
+
+}
+
+void traverse_new_class() {
+
+}
+
+void traverse_isvoid() {
+
+}
+
+void traverse_object_class() {
+
+}
+
 
 /*
  * This is the entry point to the semantic checker.
@@ -341,4 +476,8 @@ void program_class::semant() {
   // type checking : assign types to each node of the AST
   // figure out the type of the expression/feature in the AST
   // 
+  for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+    traverse_class(table, classes->nth(i));
+  }
+
 }
