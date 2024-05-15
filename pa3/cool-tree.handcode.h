@@ -92,7 +92,7 @@ typedef Cases_class *Cases;
   void dump_type(ostream&, int);				\
   virtual Symbol get_name() = 0; \
   virtual Expression get_expr() = 0; \
-  virtual Symbol traverse(SymbolTable table) = 0; \
+  virtual Symbol traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) = 0; \
   Expression_class() { type = (Symbol) NULL; }
 
 #define Expression_SHARED_EXTRAS		\
