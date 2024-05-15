@@ -90,9 +90,16 @@ typedef Cases_class *Cases;
   Expression set_type(Symbol s) { type = s; return this; }	\
   virtual void dump_with_types(ostream&,int) = 0;		\
   void dump_type(ostream&, int);				\
+  virtual Symbol get_name() = 0; \
+  virtual Expression get_expr() = 0; \
+  virtual Symbol traverse(SymbolTable table) = 0; \
   Expression_class() { type = (Symbol) NULL; }
 
 #define Expression_SHARED_EXTRAS		\
   void dump_with_types(ostream&,int);
+
+#define assign_EXTRAS \
+  Symbol get_name() { return name; } \
+  Expression get_expr() { return expr; } \
 
 #endif  // COOL_TREE_HANDCODE_H

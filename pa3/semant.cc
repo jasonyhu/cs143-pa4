@@ -309,9 +309,15 @@ ostream& ClassTable::semant_error()
 }
 
 void traverse_class(&ClassTableP table, Class_ cur) {
+  // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
+  SymbolTable methods = SymbolTable();
+  SymbolTable objects = SymbolTable();
   Features_ features = cur->get_features();
+
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     // TODO: check if feature is attr or method
+    // TODO: pass attribute (objects) table to further recursive calls
+    if (features->nth(i))
     return;
   }
 }
@@ -325,123 +331,149 @@ void traverse_class(&ClassTableP table, Class_ cur) {
 
 void traverse_method(Feature_ feature) {
   Formals_ formals = cur->get_formals();
+  // ADD OBJECT NAME TO TABLE
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     return;
   }
 }
 
-void traverse_attr(Feature_ feature) {
+Symbol traverse_attr(Feature_ feature) {
+  Features_ features = cur->get_features();
+  // ADD OBJECT NAME TO TABLE
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    return;
+  }
+}
+
+Symbol traverse_formal(Formal_ formal) {
   Features_ features = cur->get_features();
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     return;
   }
 }
 
-void traverse_formal(Formal_ formal) {
-  Features_ features = cur->get_features();
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
+Symbol traverse_branch(Case_ case_) {
+  // ADD OBJECT NAME TO TABLE
+
+}
+
+Symbol Expression_class::traverse(Expression_ expression) {
+  if (expression )
+}
+
+Symbol assign_class::traverse(Expression_ exp, SymbolTable objects) {
+  objects.enterscope();
+  objects.addid(exp.get_name(), expr);
+  // recurse down to exp
+  traverse_expression(exp.get_expr());
+  // after processing e, remove definition of x + restore old definition of x
+  objects.exitscope();
+
+}
+
+Symbol static_dispatch_class::traverse_branch(Case_ case_) {
+  Expressions_ expressions = cur->get_expressions();
+  for (int i = expressions->first(); expressions->more(i); i = expressions->next(i)) {
     return;
   }
 }
 
-void traverse_branch(Case_ case_) {
+Symbol dispatch_class::traverse(SymbolTable table) {
+  Expressions_ expressions = cur->get_expressions();
+  for (int i = expressions->first(); expressions->more(i); i = expressions->next(i)) {
+    return;
+  }
 
 }
 
-void traverse_expression(Expression_ expression) {
+Symbol cond_class::traverse(SymbolTable table) {
+
+}
+
+Symbol loop_class::traverse(SymbolTable table) {
+
+}
+
+Symbol typcase_class::traverse(SymbolTable table) {
+
+}
+
+Symbol block_class::traverse(SymbolTable table) {
+
+}
+
+Symbol let_class::traverse(SymbolTable table) {
+  // ADD OBJECT NAME TO TABLE
+
+}
+
+Symbol plus_class::traverse(SymbolTable table) {
+
+}
+
+Symbol sub_class::traverse(SymbolTable table) {
+
+}
+
+Symbol mul_class::traverse(SymbolTable table) {
+
+}
+
+Symbol divide_class::traverse(SymbolTable table) {
+
+}
+
+Symbol neg_class::traverse(SymbolTable table) {
+
+}
+
+Symbol lt_class::traverse(SymbolTable table) {
+
+}
+
+Symbol eq_class::traverse(SymbolTable table) {
+
+}
+
+Symbol leq_class::traverse(SymbolTable table) {
+
+}
+
+Symbol comp_class::traverse(SymbolTable table) {
+
+}
+
+Symbol int_const_class::traverse(SymbolTable table) {
+  set_type(Int);
+  return Int;
+}
+
+Symbol bool_const_class::traverse(SymbolTable table) {
+  set_type(Bool);
+  return Bool;
+}
+
+Symbol string_const_class::traverse(SymbolTable table) {
+  set_type(Str);
+  return Str;
+}
+
+Symbol new__class::traverse(SymbolTable table) {
+
+}
+
+Symbol isvoid_class::traverse(SymbolTable table) {
+
+}
+
+Symbol no_expr_class::traverse(SymbolTable table) {
+  set_type(No_type);
+  return No_type;
+}
+
+
+Symbol object_class::traverse(SymbolTable table) {
   
-}
-
-void traverse_assign(Case_ case_) {
-
-}
-
-void traverse_static_dispatch(Case_ case_) {
-
-}
-
-void traverse_dispatch() {
-
-}
-
-void traverse_cond() {
-
-}
-
-void traverse_loop() {
-
-}
-
-void traverse_typcase() {
-
-}
-
-void traverse_block() {
-
-}
-
-void traverse_let() {
-
-}
-
-void traverse_plus() {
-
-}
-
-void traverse_sub() {
-
-}
-
-void traverse_mul() {
-
-}
-
-void traverse_divide() {
-
-}
-
-void traverse_neg() {
-
-}
-
-void traverse_lt() {
-
-}
-
-void traverse_eq() {
-
-}
-
-void traverse_leq() {
-
-}
-
-void traverse_comp() {
-
-}
-
-void traverse_int_const() {
-
-}
-
-void traverse_bool_const() {
-
-}
-
-void traverse_string_const() {
-
-}
-
-void traverse_new_class() {
-
-}
-
-void traverse_isvoid() {
-
-}
-
-void traverse_object_class() {
-
 }
 
 
