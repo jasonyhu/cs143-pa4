@@ -345,7 +345,7 @@ void class__class::traverse(ClassTable* table, Class_ cur) {
   objects.exitscope();
 }
 
-void method_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   // ADD METHOD NAME
   // add method to signature
@@ -353,11 +353,22 @@ void method_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Sy
   std::map<Symbol, Classes> methodMap;
   objects.enterscope();
   // methods.addid(type_name, )
-
+  Classes formalClasses = nil_Classes();
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-
-    formals->nth(i)->traverse(classes, methods, objects, errClass);
+    Formal param = formals->nth(i);
+    if (classes->lookup(param->get_type()) == NULL) {
+      // throw error - invalid class
+    }
+    if (formalClasses->len() == 0) {
+      formalClasses = single_Classes(classes->lookup(param->get_type())->get_class());
+    } else {
+      formalClasses = append_Classes(formalClasses, single_Classes(classes->lookup(param->get_type())->get_class()));
+    }
+    // TODO: are these invalid type_decls just Objects then?
+    objects.addid(param->get_name(), classes->lookup(param->get_type())->get_class());
   }
+  exp->traverse(classes, methods, objects, errClass);
+  // TODO: annotate method body?
 }
 
 void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
@@ -386,11 +397,6 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
       classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
     }
   }
-}
-
-void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // TODO:
-  return;
 }
 
 Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
