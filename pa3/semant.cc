@@ -6,6 +6,8 @@
 #include <set>
 #include <vector>
 #include "semant.h"
+#include "cool-tree.h"
+#include "cool-tree.handcode.h"
 #include "utilities.h"
 
 extern int semant_debug;
@@ -327,18 +329,14 @@ ostream& ClassTable::semant_error()
     return error_stream;
 }
 
-void traverse_class(ClassTable* table, Class_ cur) {
+void class__class::traverse(ClassTable* table, Class_ cur) {
   // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
-  SymbolTable methods = SymbolTable();
-  SymbolTable objects = SymbolTable();
-  Features_ features = cur->get_features();
+  SymbolTable<Symbol, std::map<Symbol, Classes>> methods = SymbolTable<Symbol, std::map<Symbol, Classes>>();
+  SymbolTable<Symbol, Class__class> objects = SymbolTable<Symbol, Class__class>();
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    // TODO: check if feature is attr or method
     // TODO: pass attribute (objects) table to further recursive calls
-    
-    if (features->nth(i))
-    return;
+    features->nth(i)->traverse(table, methods, objects, cur);
   }
 }
 
@@ -349,52 +347,49 @@ void traverse_class(ClassTable* table, Class_ cur) {
 //   }
 // }
 
-void traverse_method(Feature_ feature) {
-  Classes_ formals = cur->get_classes();
+void method_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   // ADD METHOD NAME
   // add method to signature
-  std::map<Feature_, Classes> methodMap;
+  std::map<Symbol, Classes> methodMap;
   
-  methods.addid(type_name, )
+  // methods.addid(type_name, )
 
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    return;
+    formals->nth(i)->traverse(classes, methods, objects, errClass);
   }
 }
 
-Symbol traverse_attr(Feature_ feature) {
-  Features_ features = cur->get_features();
+void attr_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
-    return;
-  }
+  init->traverse(classes, methods, objects, errClass);
+  // TODO: CHANGE THIS
 }
 
-Symbol traverse_formal(Formal_ formal) {
-  Features_ features = cur->get_features();
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
-    return;
-  }
+void formal_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  // TODO:
+  return;
 }
 
-Symbol branch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol branch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   objects.addid(name, classes->lookup(type_decl)->get_class());
-  expr->traverse(classes, methods, objects);
+  expr->traverse(classes, methods, objects, errClass);
   return expr->get_type();
 }
 
-Symbol Expression_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol Expression_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // TODO: is there really anything to do
   return No_type;
 }
 
-Symbol assign_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  expr->traverse(classes, methods, objects);
+Symbol assign_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  expr->traverse(classes, methods, objects, errClass);
   // check if 
   if (objects.lookup(name) == NULL) {
-    // throw error
+    classes->semant_error(errClass) << ": " << "Identifier does not refer to an object.\n";
+    set_type(Object);
+    return Object;
   }
 
   std::set<Class_> xSet;
@@ -413,14 +408,16 @@ Symbol assign_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<
   // AFTER PROCESSING E, REMOVE DEFINITION OF X AND RESTORE OLD DEFINITION OF X
 
   // throw error
-
+  classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+  set_type(Object);
+  return Object;
 }
 
-Symbol static_dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  expr->traverse(classes, methods, objects);
+Symbol static_dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  expr->traverse(classes, methods, objects, errClass);
   std::vector<Symbol> formals;
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
-    actual->nth(i)->traverse(classes, methods, objects);
+    actual->nth(i)->traverse(classes, methods, objects, errClass);
     formals.push_back(actual->nth(i)->get_type());
   }
   // check if T_0 is subtype of T
@@ -435,12 +432,16 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, 
     }
   }
   if (!isInherit) {
-    // throw error, subtyping doesn't exist
+    classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+    set_type(Object);
+    return Object;
   }
 
   // add method to signature
   if (methods.lookup(name) == NULL) {
-    // TODO: throw error
+    classes->semant_error(errClass) << ": " << "Invalid method.\n";
+    set_type(Object);
+    return Object;
   }
   
   Classes methodFormals = methods.lookup(type_name)->find(name)->second;
@@ -460,17 +461,20 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, 
     }
     if (!isInherit) {
       // throw error, subtyping doesn't exist for a parameter
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+      set_type(Object);
+      return Object;
     }
   }
   set_type(methods.lookup(type_name)->find(name)->second->nth(formals.size() - 1)->get_name());
   return methods.lookup(type_name)->find(name)->second->nth(formals.size() - 1)->get_name();
 }
 
-Symbol dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  expr->traverse(classes, methods, objects);
+Symbol dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  expr->traverse(classes, methods, objects, errClass);
   std::vector<Symbol> formals;
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
-    actual->nth(i)->traverse(classes, methods, objects);
+    actual->nth(i)->traverse(classes, methods, objects, errClass);
     formals.push_back(actual->nth(i)->get_type());
   }
   // check for dispatch caller type
@@ -481,7 +485,9 @@ Symbol dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::ma
 
   // add method to signature
   if (methods.lookup(name) == NULL) {
-    // TODO: throw error
+    classes->semant_error(errClass) << ": " << "Invalid method.\n";
+    set_type(Object);
+    return Object;
   }
 
   Classes methodFormals = methods.lookup(caller_type)->find(name)->second;
@@ -501,6 +507,9 @@ Symbol dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::ma
     }
     if (!isInherit) {
       // throw error, subtyping doesn't exist for a parameter
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+      set_type(Object);
+      return Object;
     }
   }
 
@@ -508,36 +517,42 @@ Symbol dispatch_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::ma
   return methods.lookup(caller_type)->find(name)->second->nth(formals.size() - 1)->get_name();
 }
 
-Symbol cond_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  pred->traverse(classes, methods, objects);
-  then_exp->traverse(classes, methods, objects);
-  else_exp->traverse(classes, methods, objects);
+Symbol cond_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  pred->traverse(classes, methods, objects, errClass);
+  then_exp->traverse(classes, methods, objects, errClass);
+  else_exp->traverse(classes, methods, objects, errClass);
   if (pred->get_type() != Bool) {
-    // TODO: throw error
+    classes->semant_error(errClass) << ": " << "First expression is not a boolean. \n";
+    set_type(Object);
+    return Object;
   }
   set_type(lub(classes, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name());
   return lub(classes, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name();
 }
 
-Symbol loop_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  pred->traverse(classes, methods, objects);
-  body->traverse(classes, methods, objects);
+Symbol loop_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  pred->traverse(classes, methods, objects, errClass);
+  body->traverse(classes, methods, objects, errClass);
   if (pred->get_type() != Bool) {
-    // TODO: throw error
+    classes->semant_error(errClass) << ": " << "First expression is not a boolean.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Object);
   return Object;
 }
 
-Symbol typcase_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  expr->traverse(classes, methods, objects);
+Symbol typcase_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  expr->traverse(classes, methods, objects, errClass);
   std::set<Class_> types;
   Symbol return_type = NULL;
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
     objects.enterscope();
-    cases->nth(i)->traverse(classes, methods, objects);
+    cases->nth(i)->traverse(classes, methods, objects, errClass);
     if (types.find(objects.lookup(cases->nth(i)->get_name())) != types.end()) {
-      // throw error (variables must all have distinct types)
+      classes->semant_error(errClass) << ": " << "Variables do not have distinct types.\n";
+      set_type(Object);
+      return Object;
     } else {
       types.insert(objects.lookup(cases->nth(i)->get_name()));
     }
@@ -552,22 +567,23 @@ Symbol typcase_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map
   return return_type;
 }
 
-Symbol block_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol block_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {
     Expression exp = body->nth(i);
-    exp->traverse(classes, methods, objects);
+    exp->traverse(classes, methods, objects, errClass);
     if (i == body->len() - 1) {
       set_type(exp->get_type());
       return exp->get_type();
     }
   }
+  return Object;
 }
 
-Symbol let_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol let_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   // note: in new scope, match self with type of self in objects table (class)
-  init->traverse(classes, methods, objects);
-  body->traverse(classes, methods, objects);
+  init->traverse(classes, methods, objects, errClass);
+  body->traverse(classes, methods, objects, errClass);
 
   objects.enterscope();
   // init's type must inherit x
@@ -591,7 +607,9 @@ Symbol let_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Sym
       }
     }
     if (!isInherit) {
-      // throw error, subtyping doesn't exist
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+      set_type(Object);
+      return Object;
     }
   }
   set_type(body->get_type());
@@ -599,133 +617,134 @@ Symbol let_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Sym
 
 }
 
-Symbol plus_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
+Symbol plus_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
     // throw error
-  }
-  if (e2->get_type() != Int) {
-    // throw error
-  }
-  set_type(Int);
-  return Int;
-}
-
-Symbol sub_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
-  }
-  if (e2->get_type() != Int) {
-    // throw error
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Int);
   return Int;
 }
 
-Symbol mul_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
-  }
-  if (e2->get_type() != Int) {
-    // throw error
-  }
-  set_type(Int);
-  return Int;
-}
-
-Symbol divide_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
-  }
-  if (e2->get_type() != Int) {
-    // throw error
+Symbol sub_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Int);
   return Int;
 }
 
-Symbol neg_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
+Symbol mul_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Int);
   return Int;
 }
 
-Symbol lt_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
+Symbol divide_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
-  if (e2->get_type() != Int) {
-    // throw error
+  set_type(Int);
+  return Int;
+}
+
+Symbol neg_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "Expression is not an integer.\n";
+    set_type(Object);
+    return Object;
+  }
+  set_type(Int);
+  return Int;
+}
+
+Symbol lt_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Bool);
   return Bool;
 }
 
-Symbol eq_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
+Symbol eq_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
   if ( (e1->get_type() == Int && e2->get_type() != Int) && 
     (e1->get_type() == Bool && e2->get_type() != Bool) && 
     (e1->get_type() == Str && e2->get_type() != Str) && 
     (e2->get_type() == Int && e1->get_type() != Int) && 
     (e2->get_type() == Bool && e1->get_type() != Bool) && 
     (e2->get_type() == Str && e1->get_type() != Str)) {
-      // throw error
+      classes->semant_error(errClass) << ": " << "Expressions do not match each other.\n";
+      set_type(Object);
+      return Object;
     }
   set_type(Bool);
   return Bool;
 }
 
-Symbol leq_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
-  e2->traverse(classes, methods, objects);
-  if (e1->get_type() != Int) {
-    // throw error
-  }
-  if (e2->get_type() != Int) {
-    // throw error
+Symbol leq_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if (e1->get_type() != Int || e2->get_type() != Int) {
+    classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Bool);
   return Bool;
 }
 
-Symbol comp_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
-  e1->traverse(classes, methods, objects);
+Symbol comp_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
   if (e1->get_type() != Bool) {
-    // throw error
+    classes->semant_error(errClass) << ": " << "Expression is not an integer.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(Bool);
   return Bool;
 }
 
-Symbol int_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol int_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   set_type(Int);
   return Int;
 }
 
-Symbol bool_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol bool_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   set_type(Bool);
   return Bool;
 }
 
-Symbol string_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol string_const_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   set_type(Str);
   return Str;
 }
 
-Symbol new__class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol new__class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   if (type_name == SELF_TYPE) {
     set_type(classes->lookup(self)->get_class()->get_name());
     return classes->lookup(self)->get_class()->get_name();
@@ -734,20 +753,22 @@ Symbol new__class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Sy
   return type_name;
 }
 
-Symbol isvoid_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol isvoid_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   set_type(Bool);
   return Bool;
 }
 
-Symbol no_expr_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol no_expr_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   set_type(No_type);
   return No_type;
 }
 
 
-Symbol object_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) {
+Symbol object_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   if (objects.lookup(name) == NULL) {
-    // throw error
+    classes->semant_error(errClass) << ": " << "Identifier does not refer to object.\n";
+    set_type(Object);
+    return Object;
   }
   set_type(name);
   return name;
@@ -786,7 +807,7 @@ void program_class::semant() {
   // figure out the type of the expression/feature in the AST
   // 
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    traverse_class(classtable, classes->nth(i));
+    classes->nth(i)->traverse(classtable, classes->nth(i));
   }
 
 }

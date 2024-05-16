@@ -4,9 +4,9 @@
 #include <iostream>
 #include "tree.h"
 #include "stringtab.h"
-#include "semant.h"
 #include "symtab.h"
 #include <map>
+#include "semant.h"
 #define yylineno curr_lineno
 extern int yylineno;
 
@@ -21,6 +21,8 @@ void dump_Symbol(ostream& stream, int padding, Symbol b);
 void assert_Symbol(Symbol b);
 Symbol copy_Symbol(Symbol b);
 
+class InheritanceNode;
+class ClassTable;
 class Program_class;
 typedef Program_class *Program;
 class Class__class;
@@ -59,6 +61,7 @@ typedef Cases_class *Cases;
   virtual Symbol get_parent() = 0; \
   virtual Symbol get_name() = 0; \
   virtual Features get_features() = 0; \
+  virtual void traverse(ClassTable* table, Class_ cur) = 0; \
   virtual void dump_with_types(ostream&,int) = 0;
 
 #define class__EXTRAS				       \
@@ -66,31 +69,35 @@ typedef Cases_class *Cases;
   Symbol get_parent() { return parent; } \
   Symbol get_name() { return name; } \
   Features get_features() { return features; } \
+  void traverse(ClassTable* table, Class_ cur); \
   void dump_with_types(ostream&,int);
 
 #define Feature_EXTRAS					\
-  virtual void dump_with_types(ostream&,int) = 0;
+  virtual void dump_with_types(ostream&,int) = 0; \
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
 
 #define Feature_SHARED_EXTRAS			\
-  void dump_with_types(ostream&,int);
-
+  void dump_with_types(ostream&,int); \
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
 
 #define Formal_EXTRAS					      \
-  virtual void dump_with_types(ostream&,int) = 0;
+  virtual void dump_with_types(ostream&,int) = 0; \
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
 
 #define formal_EXTRAS				  \
-  void dump_with_types(ostream&,int);
+  void dump_with_types(ostream&,int); \
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
 
 #define Case_EXTRAS					\
   virtual void dump_with_types(ostream& ,int) = 0; \
   virtual Symbol get_name() = 0; \
   virtual Symbol get_type_decl() = 0; \
-  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
 
 #define branch_EXTRAS					\
   void dump_with_types(ostream&, int); \
   Symbol get_name() { return name; }; \
-  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
 
 #define Expression_EXTRAS					\
   Symbol type;							\
@@ -100,12 +107,12 @@ typedef Cases_class *Cases;
   void dump_type(ostream&, int);				\
   virtual Symbol get_name() = 0; \
   virtual Expression get_expr() = 0; \
-  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
   Expression_class() { type = (Symbol) NULL; } \
 
 #define Expression_SHARED_EXTRAS		\
   void dump_with_types(ostream&,int); \
-  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects); \
+  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur); \
 
 #define assign_EXTRAS \
   Symbol get_name() { return name; } \
