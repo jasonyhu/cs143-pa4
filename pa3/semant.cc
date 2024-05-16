@@ -361,7 +361,7 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     if (formal_map.count(formals->nth(i)->get_name())) {
       classes->semant_error(errClass) << ": " << "Duplicate formal .\n";
     }
-    formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
+    // formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
     formals->nth(i)->traverse(classes, methods, objects, errClass);
   }
   expr->traverse(classes, methods, objects, errClass);
@@ -380,7 +380,7 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   if (!isInherit) {
     classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
   }
-  methods.addid(name, formal_map);
+  // methods.addid(name, formal_map);
   objects.exitscope();
 }
 
