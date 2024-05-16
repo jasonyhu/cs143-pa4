@@ -50,7 +50,6 @@ public:
   Classes basic_classes;
   SymbolTable<Symbol, Class_> *map = new SymbolTable<Symbol, Class_>();
   int errors() { return semant_errors; };
-  Class_ lub(Class_ x, Class_ y);
   std::ostream& semant_error();
   std::ostream& semant_error(Class_ c);
   std::ostream& semant_error(Symbol filename, tree_node *t);

@@ -4,6 +4,9 @@
 #include <iostream>
 #include "tree.h"
 #include "stringtab.h"
+#include "semant.h"
+#include "symtab.h"
+#include <map>
 #define yylineno curr_lineno
 extern int yylineno;
 
@@ -79,10 +82,15 @@ typedef Cases_class *Cases;
   void dump_with_types(ostream&,int);
 
 #define Case_EXTRAS					\
-  virtual void dump_with_types(ostream& ,int) = 0;
+  virtual void dump_with_types(ostream& ,int) = 0; \
+  virtual Symbol get_name() = 0; \
+  virtual Symbol get_type_decl() = 0; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
 
 #define branch_EXTRAS					\
-  void dump_with_types(ostream&, int);
+  void dump_with_types(ostream&, int); \
+  Symbol get_name() { return name; }; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
 
 #define Expression_EXTRAS					\
   Symbol type;							\
@@ -92,11 +100,12 @@ typedef Cases_class *Cases;
   void dump_type(ostream&, int);				\
   virtual Symbol get_name() = 0; \
   virtual Expression get_expr() = 0; \
-  virtual Symbol traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) = 0; \
-  Expression_class() { type = (Symbol) NULL; }
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects) = 0; \
+  Expression_class() { type = (Symbol) NULL; } \
 
 #define Expression_SHARED_EXTRAS		\
-  void dump_with_types(ostream&,int);
+  void dump_with_types(ostream&,int); \
+  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class_>& objects); \
 
 #define assign_EXTRAS \
   Symbol get_name() { return name; } \
