@@ -390,6 +390,7 @@ Symbol assign_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTa
       return expr->get_type();
     }
   }
+  // AFTER PROCESSING E, REMOVE DEFINITION OF X AND RESTORE OLD DEFINITION OF X
 
   // throw error
 
@@ -397,14 +398,15 @@ Symbol assign_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTa
 
 Symbol static_dispatch_class::traverse_branch(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
   Expressions_ expressions = cur->get_expressions();
-  for (int i = expressions->first(); expressions->more(i); i = expressions->next(i)) {
-    return;
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    traverse(actual->nth(i));
   }
+
 }
 
 Symbol dispatch_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
-  Expressions_ expressions = cur->get_expressions();
-  for (int i = expressions->first(); expressions->more(i); i = expressions->next(i)) {
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    traverse(actual->nth(i));
     return;
   }
 
