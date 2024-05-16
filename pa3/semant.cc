@@ -92,8 +92,6 @@ Features InheritanceNode::get_features() { return features; };
 Class_ InheritanceNode::get_class() { return thisclass_; };
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
-  /* Fill this in */
-  // what do i do with these basic classes
   enterscope();
   install_basic_classes();
 
@@ -146,7 +144,6 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
       visited.insert(cur);
       while (cur != lookup(Object)->get_class()) {
         forest.insert(cur);
-        // issue: lookup doesn't work
         cur = lookup(cur->get_parent())->get_class();
         if (forest.find(cur) != forest.end()) {  // error found
           Class_ loop_start = cur;
@@ -338,6 +335,7 @@ void traverse_class(&ClassTableP table, Class_ cur) {
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     // TODO: check if feature is attr or method
     // TODO: pass attribute (objects) table to further recursive calls
+    
     if (features->nth(i))
     return;
   }
@@ -353,6 +351,12 @@ void traverse_class(&ClassTableP table, Class_ cur) {
 void traverse_method(Feature_ feature) {
   Formals_ formals = cur->get_formals();
   // ADD OBJECT NAME TO TABLE
+  // ADD METHOD NAME
+  // add method to signature
+  std::map<Feature_, Formals_> methodMap;
+  
+  methods->addid(type_name, )
+
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     return;
   }
@@ -375,11 +379,11 @@ Symbol traverse_formal(Formal_ formal) {
 
 Symbol traverse_branch(Case_ case_) {
   // ADD OBJECT NAME TO TABLE
-
 }
 
 Symbol Expression_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
-  if (expression )
+  // TODO: is there really anything to do
+  return no_expr;
 }
 
 Symbol assign_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
@@ -409,18 +413,100 @@ Symbol assign_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTa
 }
 
 Symbol static_dispatch_class::traverse_branch(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
-  Expressions_ expressions = cur->get_expressions();
-  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+  traverse(expr);
+  vector<formal_> formals;
+  for (int i = actual->first(0); actual->more(i); i = actual->next(i)) {
     traverse(actual->nth(i));
+    formals.push_back(actual->nth(i)->get_type());
+  }
+  // check if T_0 is subtype of T
+  bool isInherit = false;
+  Class_ cur = actual->nth(0)->get_type();
+  std::set<Class_> xSet;
+  while (cur != lookup(Object)->get_class()) {
+    cur = lookup(cur->get_parent())->get_class();
+    xSet.insert(cur);
+    if (xSet.find(classes->lookup(type_name)->get_class()) != xSet.end()) {
+      isInherit = true;
+    }
+  }
+  if (!isInherit) {
+    // throw error, subtyping doesn't exist
   }
 
+  // add method to signature
+  if (methods->lookup(name) == NULL) {
+    // TODO: throw error
+  }
+
+  Formals methodFormals = methods->lookup(type_name)[name];
+  // check if each parameter in dispatch call inherits declared parameter
+  // TODO: make sure method table stores parameters AND return types too
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    // represents return type, do not check inheritance
+    if (i == formals->len() - 1) {
+      break;
+    }
+    bool isInherit = false;
+    Class_ cur = formals->nth(i)->get_type();
+    std::set<Class_> xSet;
+    while (cur != lookup(Object)->get_class()) {
+      cur = lookup(cur->get_parent())->get_class();
+      xSet.insert(cur);
+      if (xSet.find(classes->lookup(methodFormals[i])->get_class()) != xSet.end()) {
+        isInherit = true;
+      }
+    }
+    if (!isInherit) {
+      // throw error, subtyping doesn't exist for a parameter
+    }
+  }
+  set_type(methods->lookup(type_name)[name][formals->len() - 1]);
+  return methods->lookup(type_name)[name][formals->len() - 1];
 }
 
 Symbol dispatch_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
-  for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+  traverse(expr);
+  vector<formal_> formals;
+  for (int i = actual->first(0); actual->more(i); i = actual->next(i)) {
     traverse(actual->nth(i));
-    return;
+    formals.push_back(actual->nth(i)->get_type());
   }
+  // check for dispatch caller type
+  Symbol caller_type = classes->lookup(self);
+  if (actual->nth[0]->get_type() != SELF_TYPE) {
+    caller_type = actual->nth[0]->get_type();
+  }
+
+  // add method to signature
+  if (methods->lookup(name) == NULL) {
+    // TODO: throw error
+  }
+
+  Formals methodFormals = methods->lookup(caller_type)[name];
+  // check if each parameter in dispatch call inherits declared parameter
+  // TODO: make sure method table stores parameters AND return types too
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    // represents return type, do not check inheritance
+    if (i == formals->len() - 1) {
+      break;
+    }
+    bool isInherit = false;
+    Class_ cur = formals->nth(i)->get_type();
+    std::set<Class_> xSet;
+    while (cur != lookup(Object)->get_class()) {
+      cur = lookup(cur->get_parent())->get_class();
+      xSet.insert(cur);
+      if (xSet.find(classes->lookup(methodFormals[i])->get_class()) != xSet.end()) {
+        isInherit = true;
+      }
+    }
+    if (!isInherit) {
+      // throw error, subtyping doesn't exist for a parameter
+    }
+  }
+  set_type(methods->lookup(caller_type)[name][formals->len() - 1]);
+  return methods->lookup(caller_type)[name][formals->len() - 1];
 
 }
 
@@ -446,6 +532,13 @@ Symbol loop_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTabl
 }
 
 Symbol typcase_class::traverse(SymbolTable classes, SymbolTable methods, SymbolTable objects) {
+  traverse(expr);
+  for (int i = cases->first(0); cases->more(i); i = cases->next(i)) {
+    // TODO: ???
+    traverse(case->nth(i));
+  }
+  
+
 
 }
 
