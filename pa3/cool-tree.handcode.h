@@ -83,12 +83,16 @@ class ClassTable;
 #define Formal_EXTRAS					      \
   virtual void dump_with_types(ostream&,int) = 0; \
   virtual Symbol get_name() = 0; \
-  virtual Symbol get_type() = 0; \
+  virtual Symbol get_type_decl() = 0; \
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
 
 #define formal_EXTRAS				  \
   Symbol get_name() { return name; } \
   Symbol get_type() { return type_decl; } \
   void dump_with_types(ostream&,int); \
+  Symbol get_name() { return name; } \
+  Symbol get_type_decl() { return type_decl; } \
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
 
 #define Case_EXTRAS					\
   virtual void dump_with_types(ostream& ,int) = 0; \
@@ -109,7 +113,7 @@ class ClassTable;
   virtual void dump_with_types(ostream&,int) = 0;		\
   void dump_type(ostream&, int);				\
   virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
-  Expression_class() { type = (Symbol) NULL; } 
+  Expression_class() { type = (Symbol) NULL; }; \
 
 #define Expression_SHARED_EXTRAS		\
   void dump_with_types(ostream&,int); \

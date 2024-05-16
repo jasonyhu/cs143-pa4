@@ -186,6 +186,7 @@ Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
   return classes->lookup(Object)->get_class();
 }
 
+
 void ClassTable::install_basic_classes() {
   // The tree package uses these globals to annotate the classes built below.
   node_lineno  = 0;
@@ -346,29 +347,43 @@ void class__class::traverse(ClassTable* table, Class_ cur) {
 }
 
 void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // ADD OBJECT NAME TO TABLE
-  // ADD METHOD NAME
-  // add method to signature
+  // ADD OBJECT NAME TO TABLE -- tentatively done
+  // ADD METHOD NAME -- tentatively done
+  // add method to signature -- what does this mean?
+>>>>>>> 2805e4ba44cf24ed280624f8cc8a747edcbd4b86
   // TODO: whenever we do a lookup, CHEC every time if the class is unavailable and throw an error (for every function)
-  std::map<Symbol, Classes> methodMap;
-  objects.enterscope();
-  // methods.addid(type_name, )
-  Classes formalClasses = nil_Classes();
-  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    Formal param = formals->nth(i);
-    if (classes->lookup(param->get_type()) == NULL) {
-      // throw error - invalid class
-    }
-    if (formalClasses->len() == 0) {
-      formalClasses = single_Classes(classes->lookup(param->get_type())->get_class());
-    } else {
-      formalClasses = append_Classes(formalClasses, single_Classes(classes->lookup(param->get_type())->get_class()));
-    }
-    // TODO: are these invalid type_decls just Objects then?
-    objects.addid(param->get_name(), classes->lookup(param->get_type())->get_class());
+  if (objects.lookup(return_type) == NULL && return_type != SELF_TYPE) {
+    classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
-  exp->traverse(classes, methods, objects, errClass);
-  // TODO: annotate method body?
+  objects.addid(name, objects.lookup(return_type));
+  objects.enterscope();
+  std::map<Symbol, Classes> formal_map;
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    if (formal_map.count(formals->nth(i)->get_name())) {
+      classes->semant_error(errClass) << ": " << "Duplicate formal .\n";
+    }
+    formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
+    formals->nth(i)->traverse(classes, methods, objects, errClass);
+  }
+  expr->traverse(classes, methods, objects, errClass);
+  Symbol expr_type = expr->get_type();
+  
+  bool isInherit = false;
+  Class_ cur = classes->lookup(expr_type)->get_class();
+  std::set<Class_> xSet;
+  while (cur != classes->lookup(Object)->get_class()) {
+    cur = classes->lookup(cur->get_parent())->get_class();
+    xSet.insert(cur);
+    if (xSet.find(classes->lookup(return_type)->get_class()) != xSet.end()) {
+      isInherit = true;
+    }
+  }
+  if (!isInherit) {
+    classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
+  }
+  methods.addid(name, formal_map);
+  objects.exitscope();
+>>>>>>> 2805e4ba44cf24ed280624f8cc8a747edcbd4b86
 }
 
 void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
@@ -399,10 +414,24 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
   }
 }
 
+void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
+  Symbol type = type_decl;
+  if (name == self) {
+    classes->semant_error(errClass) << ": " << "self in formal.\n";
+  } else if (name == SELF_TYPE) {
+    type = classes->lookup(self)->get_class()->get_name();
+  } else if (classes->lookup(type) == NULL) {
+    classes->semant_error(errClass) << ": " << "No class " << type << " in program.\n";  
+  }
+  objects.addid(name, classes->lookup(type)->get_class());
+}
+
 Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
+  objects.enterscope();
   objects.addid(name, classes->lookup(type_decl)->get_class());
   expr->traverse(classes, methods, objects, errClass);
+  objects.exitscope();
   return expr->get_type();
 }
 
