@@ -10,13 +10,13 @@
 
 
 #include "tree.h"
-#include "symtab.h"
-#include "semant.h"
 #include "cool-tree.handcode.h"
 
 // define the class for phylum
 // define simple phylum - Program
+
 typedef class Program_class *Program;
+typedef bool Boolean;
 
 class Program_class : public tree_node {
 public:

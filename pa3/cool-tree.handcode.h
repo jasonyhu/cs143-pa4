@@ -6,7 +6,7 @@
 #include "stringtab.h"
 #include "symtab.h"
 #include <map>
-#include "semant.h"
+
 #define yylineno curr_lineno
 extern int yylineno;
 
@@ -21,8 +21,6 @@ void dump_Symbol(ostream& stream, int padding, Symbol b);
 void assert_Symbol(Symbol b);
 Symbol copy_Symbol(Symbol b);
 
-class InheritanceNode;
-class ClassTable;
 class Program_class;
 typedef Program_class *Program;
 class Class__class;
@@ -47,6 +45,8 @@ typedef Expressions_class *Expressions;
 typedef list_node<Case> Cases_class;
 typedef Cases_class *Cases;
 
+class InheritanceNode;
+class ClassTable;
 
 #define Program_EXTRAS					\
   virtual void semant() = 0;				\
@@ -74,30 +74,31 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS					\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; 
 
 #define Feature_SHARED_EXTRAS			\
   void dump_with_types(ostream&,int); \
-  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); 
 
 #define Formal_EXTRAS					      \
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; 
 
 #define formal_EXTRAS				  \
   void dump_with_types(ostream&,int); \
-  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); 
 
 #define Case_EXTRAS					\
   virtual void dump_with_types(ostream& ,int) = 0; \
   virtual Symbol get_name() = 0; \
   virtual Symbol get_type_decl() = 0; \
-  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
+  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; 
 
 #define branch_EXTRAS					\
   void dump_with_types(ostream&, int); \
   Symbol get_name() { return name; }; \
-  virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
+  Symbol get_type_decl() { return name; }; \
+  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur); 
 
 #define Expression_EXTRAS					\
   Symbol type;							\
@@ -105,17 +106,11 @@ typedef Cases_class *Cases;
   Expression set_type(Symbol s) { type = s; return this; }	\
   virtual void dump_with_types(ostream&,int) = 0;		\
   void dump_type(ostream&, int);				\
-  virtual Symbol get_name() = 0; \
-  virtual Expression get_expr() = 0; \
   virtual Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur) = 0; \
-  Expression_class() { type = (Symbol) NULL; } \
+  Expression_class() { type = (Symbol) NULL; } 
 
 #define Expression_SHARED_EXTRAS		\
   void dump_with_types(ostream&,int); \
-  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur); \
-
-#define assign_EXTRAS \
-  Symbol get_name() { return name; } \
-  Expression get_expr() { return expr; } \
+  Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur); 
 
 #endif  // COOL_TREE_HANDCODE_H

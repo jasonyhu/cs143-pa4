@@ -6,8 +6,6 @@
 #include <set>
 #include <vector>
 #include "semant.h"
-#include "cool-tree.h"
-#include "cool-tree.handcode.h"
 #include "utilities.h"
 
 extern int semant_debug;
@@ -94,6 +92,12 @@ Symbol InheritanceNode::get_parent() { return parent; };
 Features InheritanceNode::get_features() { return features; };
 Class_ InheritanceNode::get_class() { return thisclass_; };
 
+InheritanceNode::InheritanceNode(Class_ class_) {
+  parent = class_->get_parent();
+  features = class_->get_features();
+  thisclass_ = class_;
+};
+
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   enterscope();
   install_basic_classes();
@@ -110,7 +114,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Symbol parent = class_->get_parent();
     if (name == IO || name == Int || name == Str || name == Bool || name == Object) {
       semant_error(class_) << "Redefinition of basic class " << name->get_string() << ".\n";
-    } else if (lookup(name) != NULL) {
+    } else if (lookup(name) != NULL) { // jason added this to resolve the "TODO: what does redefining mean?"
       semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
     }
     if (parent == Int || parent == Str || parent == Bool) {
@@ -124,9 +128,6 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
-    if (lookup(name) != NULL) { // jason added this to resolve the "TODO: what does redefining mean?"
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
-    }
     if (lookup(parent) == NULL) {
       semant_error(class_) << "Class " << class_->get_name()->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
     }
@@ -165,6 +166,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
 }
 
 Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
+  // TODO: add the three other cases involving SELF_TYPE
   // least common ancestor in the inheritance tree
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
@@ -331,27 +333,25 @@ ostream& ClassTable::semant_error()
 
 void class__class::traverse(ClassTable* table, Class_ cur) {
   // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
+  // TODO: move methods to global scope
   SymbolTable<Symbol, std::map<Symbol, Classes>> methods = SymbolTable<Symbol, std::map<Symbol, Classes>>();
   SymbolTable<Symbol, Class__class> objects = SymbolTable<Symbol, Class__class>();
-
+  objects.enterscope();
+  table->addid(self, new InheritanceNode(cur));
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     // TODO: pass attribute (objects) table to further recursive calls
     features->nth(i)->traverse(table, methods, objects, cur);
   }
+  objects.exitscope();
 }
-
-// void traverse_feature(Feature_ feature) {
-//   Features_ features = cur->get_features();
-//   for (int i = features->first(); features->more(i); i = features->next(i)) {
-//     return;
-//   }
-// }
 
 void method_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   // ADD METHOD NAME
   // add method to signature
+  // TODO: whenever we do a lookup, CHEC every time if the class is unavailable and throw an error (for every function)
   std::map<Symbol, Classes> methodMap;
+  objects.enterscope();
   
   // methods.addid(type_name, )
 
@@ -362,8 +362,30 @@ void method_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Sy
 
 void attr_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
+  if (classes->lookup(type_decl) == NULL) {
+    // TODO: return error
+  }
+  objects.addid(name, classes->lookup(type_decl)->get_class());
   init->traverse(classes, methods, objects, errClass);
-  // TODO: CHANGE THIS
+  if (init->get_type() != No_type) {
+    objects.addid(self, classes->lookup(self)->get_class());
+
+    // check if init type is a subtype of x
+    bool isInherit = false;
+    Class_ cur = classes->lookup(init->get_type())->get_class();
+    std::set<Class_> xSet;
+    while (cur != classes->lookup(Object)->get_class()) {
+      cur = classes->lookup(cur->get_parent())->get_class();
+      xSet.insert(cur);
+      if (xSet.find(classes->lookup(type_decl)->get_class()) != xSet.end()) {
+        isInherit = true;
+      }
+    }
+    if (!isInherit) {
+      // throw error, subtyping doesn't exist for a parameter
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+    }
+  }
 }
 
 void formal_class::traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) {
