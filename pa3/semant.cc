@@ -6,8 +6,6 @@
 #include <set>
 #include <vector>
 #include "semant.h"
-#include "cool-tree.h"
-#include "cool-tree.handcode.h"
 #include "utilities.h"
 
 extern int semant_debug;
@@ -94,11 +92,16 @@ Symbol InheritanceNode::get_parent() { return parent; };
 Features InheritanceNode::get_features() { return features; };
 Class_ InheritanceNode::get_class() { return thisclass_; };
 
+InheritanceNode::InheritanceNode(Class_ class_) {
+  parent = class_->get_parent();
+  features = class_->get_features();
+  thisclass_ = class_;
+};
 typedef SymbolTable<Symbol, std::map<Symbol, Classes>> MethodTable;
 typedef SymbolTable<Symbol, Class__class> ObjectTable;
 
+
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
-  
   enterscope();
   install_basic_classes();
 
@@ -134,14 +137,13 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
       semant_error(class_) << "Class " << name->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
     }
   }
-
   if (errors() > 0) {
     return;
   }
   
   // iterates through each node, then traverses the recursive parents of that node to look for inheritance cycles
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    Class_ cur = classes->nth(i);
+    Class_ cur = classes->nth(i); 
     Symbol parent = cur->get_parent();
     while (parent != Object && parent != classes->nth(i)->get_name()) {
       cur = lookup(parent)->get_class();
@@ -163,6 +165,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
 }
 
 Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
+  // TODO: add the three other cases involving SELF_TYPE
   // least common ancestor in the inheritance tree
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
@@ -328,29 +331,26 @@ ostream& ClassTable::semant_error()
     return error_stream;
 }
 
-
 void class__class::traverse(ClassTable* table, Class_ cur) {
   // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
+  // TODO: move methods to global scope
   MethodTable methods = MethodTable();
   ObjectTable objects = ObjectTable();
+  objects.enterscope();
+  table->addid(self, new InheritanceNode(cur));
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     // TODO: pass attribute (objects) table to further recursive calls
     features->nth(i)->traverse(table, methods, objects, cur);
   }
+  objects.exitscope();
 }
-
-// void traverse_feature(Feature_ feature) {
-//   Features_ features = cur->get_features();
-//   for (int i = features->first(); features->more(i); i = features->next(i)) {
-//     return;
-//   }
-// }
 
 void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE -- tentatively done
   // ADD METHOD NAME -- tentatively done
   // add method to signature -- what does this mean?
+  // TODO: whenever we do a lookup, CHEC every time if the class is unavailable and throw an error (for every function)
   if (objects.lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
@@ -386,8 +386,30 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
 
 void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
+  if (classes->lookup(type_decl) == NULL) {
+    // TODO: return error
+  }
+  objects.addid(name, classes->lookup(type_decl)->get_class());
   init->traverse(classes, methods, objects, errClass);
-  // TODO: CHANGE THIS
+  if (init->get_type() != No_type) {
+    objects.addid(self, classes->lookup(self)->get_class());
+
+    // check if init type is a subtype of x
+    bool isInherit = false;
+    Class_ cur = classes->lookup(init->get_type())->get_class();
+    std::set<Class_> xSet;
+    while (cur != classes->lookup(Object)->get_class()) {
+      cur = classes->lookup(cur->get_parent())->get_class();
+      xSet.insert(cur);
+      if (xSet.find(classes->lookup(type_decl)->get_class()) != xSet.end()) {
+        isInherit = true;
+      }
+    }
+    if (!isInherit) {
+      // throw error, subtyping doesn't exist for a parameter
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+    }
+  }
 }
 
 void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
