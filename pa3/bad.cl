@@ -42,6 +42,10 @@ class AE inherits A {
 
 };
 
+class A inherits AE {
+
+};
+
 (* class C inherits A {
 	a : Int;
 	b : Bool;

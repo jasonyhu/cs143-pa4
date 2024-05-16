@@ -142,27 +142,20 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   }
   
   
-  // performs a dfs search to check for illegal inheritance cycles
-  std::set<Class_> visited;
-  // dfs: go through all nodes and iterate through each parent, adding them to the visited set
-  // if a node is already in visited, we've found a cycle
+  // iterates through each node, then traverses the recursive parents of that node to look for inheritance cycles
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    Class_ cur = classes->nth(i); 
-    std::set<Class_> forest;
-    if (visited.find(cur) == visited.end()) {
-      visited.insert(cur);
-      while (cur != lookup(Object)->get_class()) {
-        forest.insert(cur);
+    Class_ cur = classes->nth(i);
+    Symbol parent = cur->get_parent();
+    while (parent != Object && parent != classes->nth(i)->get_name()) {
+      cur = lookup(parent)->get_class();
+      parent = cur->get_parent();
+    }
+    if (parent != Object) {
+      Class_ loop_start = cur;
+      while (true) {
+        semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.\n";
         cur = lookup(cur->get_parent())->get_class();
-        if (forest.find(cur) != forest.end()) {  // error found
-          Class_ loop_start = cur;
-          while (true) {
-            semant_error(cur) << "Class " << cur->get_name()->get_string() << ", or an ancestor of " << cur->get_name()->get_string() << ", is involved in an inheritance cycle.\n";
-            cur = lookup(cur->get_parent())->get_class();
-            if (cur == loop_start) {
-              break;
-            }
-          }
+        if (cur == loop_start) {
           break;
         }
       }

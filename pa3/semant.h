@@ -52,8 +52,6 @@ class ClassTable : public SymbolTable<Symbol, InheritanceNode> {
     std::ostream& semant_error(Class_ c);
     std::ostream& semant_error(Symbol filename, tree_node *t);
 
-    // additions
-    std::map<Symbol, Class_> classes_dict;
 };
 
 
