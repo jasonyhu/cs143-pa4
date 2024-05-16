@@ -620,7 +620,6 @@ Symbol plus_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   e1->traverse(classes, methods, objects, errClass);
   e2->traverse(classes, methods, objects, errClass);
   if (e1->get_type() != Int || e2->get_type() != Int) {
-    // throw error
     classes->semant_error(errClass) << ": " << "One or both expressions is not an integer.\n";
     set_type(Object);
     return Object;
@@ -676,6 +675,21 @@ Symbol neg_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
   return Int;
 }
 
+Symbol eq_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
+  e2->traverse(classes, methods, objects, errClass);
+  if ((e1->get_type() == Int || e2->get_type() == Int 
+            || e1->get_type() == Bool || e2->get_type() == Bool
+            || e1->get_type() == Str || e2->get_type() == Str) 
+            && e1->get_type() != e2->get_type()) {
+      classes->semant_error(errClass) << ": " << "Expressions do not match each other.\n";
+      set_type(Object);
+      return Object;
+    }
+  set_type(Bool);
+  return Bool;
+}
+
 Symbol lt_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   e1->traverse(classes, methods, objects, errClass);
   e2->traverse(classes, methods, objects, errClass);
@@ -684,23 +698,6 @@ Symbol lt_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
     set_type(Object);
     return Object;
   }
-  set_type(Bool);
-  return Bool;
-}
-
-Symbol eq_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  e1->traverse(classes, methods, objects, errClass);
-  e2->traverse(classes, methods, objects, errClass);
-  if ( (e1->get_type() == Int && e2->get_type() != Int) && 
-    (e1->get_type() == Bool && e2->get_type() != Bool) && 
-    (e1->get_type() == Str && e2->get_type() != Str) && 
-    (e2->get_type() == Int && e1->get_type() != Int) && 
-    (e2->get_type() == Bool && e1->get_type() != Bool) && 
-    (e2->get_type() == Str && e1->get_type() != Str)) {
-      classes->semant_error(errClass) << ": " << "Expressions do not match each other.\n";
-      set_type(Object);
-      return Object;
-    }
   set_type(Bool);
   return Bool;
 }
