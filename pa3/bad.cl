@@ -1,4 +1,48 @@
-class C inherits A {
+(* Class definition, redefinition, and inheritance errors
+
+class AA inherits SELF_TYPE {
+
+};
+
+class AB inherits Int {
+
+};
+
+class AC inherits String {
+
+};
+
+class AD inherits Bool {
+
+};
+
+class Object {
+
+};
+
+class Int {
+
+};
+
+class SELF_TYPE {
+
+};
+
+class A {
+
+};
+
+class A{
+
+};
+
+*)
+
+class AE inherits A {
+
+};
+
+(* class C inherits A {
 	a : Int;
 	b : Bool;
 	init(x : Int, y : Bool) : C {
@@ -22,13 +66,7 @@ class A inherits B {
 
 };
 
-class Object {
 
-};
-
-class Int {
-
-};
 
 
 Class Main {
@@ -43,3 +81,5 @@ Class Main {
 };
 
 -- what if a class tries to inherit itself?
+
+*)

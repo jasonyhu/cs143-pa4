@@ -47,11 +47,13 @@ class ClassTable : public SymbolTable<Symbol, InheritanceNode> {
   public:
     ClassTable(Classes);
     Classes basic_classes;
-    SymbolTable<Symbol, Class_> *map = new SymbolTable<Symbol, Class_>();
     int errors() { return semant_errors; };
     std::ostream& semant_error();
     std::ostream& semant_error(Class_ c);
     std::ostream& semant_error(Symbol filename, tree_node *t);
+
+    // additions
+    std::map<Symbol, Class_> classes_dict;
 };
 
 

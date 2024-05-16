@@ -95,42 +95,48 @@ Features InheritanceNode::get_features() { return features; };
 Class_ InheritanceNode::get_class() { return thisclass_; };
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
+  
   enterscope();
   install_basic_classes();
 
   /* 
    * Loops through all classes in the class tree and adds them to a class table.
 
-   * Throws an error if a class redefines a basic class, if a class redefines an existing class, 
-   * or if a class inherits an uninheritable class.
+   * Throws an error if a class redefines a basic class, 
+   * redefines an existing class,
+   * or inherits an uninheritable class.
   */
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
-    Symbol parent = class_->get_parent();
-    if (name == IO || name == Int || name == Str || name == Bool || name == Object) {
+    if (name == IO || name == Int || name == Str || name == Bool || name == Object || name == SELF_TYPE) {
       semant_error(class_) << "Redefinition of basic class " << name->get_string() << ".\n";
     } else if (lookup(name) != NULL) {
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
+      semant_error(class_) << "Class " << name->get_string() << " was previously defined.\n";
+    } 
+    Symbol parent = class_->get_parent();
+    if (parent == Int || parent == Str || parent == Bool || parent == SELF_TYPE) {
+      semant_error(class_) << "Class " << name->get_string() << " cannot inherit class " << parent->get_string() << ".\n";
     }
-    if (parent == Int || parent == Str || parent == Bool) {
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " cannot inherit class " << parent->get_string() << ".\n";
-    }
+
     addid(name, new InheritanceNode(class_));
   }
   
-  // Throws error for illegal class redefinition and for inheritance from undefined classes.
+  // Throws an error for inheritance from undefined classes.
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i); 
     Symbol name = class_->get_name();
     Symbol parent = class_->get_parent();
-    if (lookup(name) != NULL) { // jason added this to resolve the "TODO: what does redefining mean?"
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " was previously defined.\n";
-    }
     if (lookup(parent) == NULL) {
-      semant_error(class_) << "Class " << class_->get_name()->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
+      semant_error(class_) << "Class " << name->get_string() << " inherits from an undefined class " << parent->get_string() << ".\n";
     }
   }
+
+  // All Cool programs must define a Main class.
+  if (lookup(Main) == NULL) {
+    semant_error() << "Class Main is not defined.\n";
+  }
+
   if (errors() > 0) {
     return;
   }
