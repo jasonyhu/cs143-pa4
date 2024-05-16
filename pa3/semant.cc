@@ -183,6 +183,7 @@ Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
   return classes->lookup(Object)->get_class();
 }
 
+
 void ClassTable::install_basic_classes() {
   // The tree package uses these globals to annotate the classes built below.
   node_lineno  = 0;
@@ -347,16 +348,40 @@ void class__class::traverse(ClassTable* table, Class_ cur) {
 // }
 
 void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // ADD OBJECT NAME TO TABLE
-  // ADD METHOD NAME
-  // add method to signature
-  std::map<Symbol, Classes> methodMap;
-  
-  // methods.addid(type_name, )
-
+  // ADD OBJECT NAME TO TABLE -- tentatively done
+  // ADD METHOD NAME -- tentatively done
+  // add method to signature -- what does this mean?
+  if (objects.lookup(return_type) == NULL && return_type != SELF_TYPE) {
+    classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
+  }
+  objects.addid(name, objects.lookup(return_type));
+  objects.enterscope();
+  std::map<Symbol, Classes> formal_map;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    if (formal_map.count(formals->nth(i)->get_name())) {
+      classes->semant_error(errClass) << ": " << "Duplicate formal .\n";
+    }
+    formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
     formals->nth(i)->traverse(classes, methods, objects, errClass);
   }
+  expr->traverse(classes, methods, objects, errClass);
+  Symbol expr_type = expr->get_type();
+  
+  bool isInherit = false;
+  Class_ cur = classes->lookup(expr_type)->get_class();
+  std::set<Class_> xSet;
+  while (cur != classes->lookup(Object)->get_class()) {
+    cur = classes->lookup(cur->get_parent())->get_class();
+    xSet.insert(cur);
+    if (xSet.find(classes->lookup(return_type)->get_class()) != xSet.end()) {
+      isInherit = true;
+    }
+  }
+  if (!isInherit) {
+    classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
+  }
+  methods.addid(name, formal_map);
+  objects.exitscope();
 }
 
 void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
@@ -366,14 +391,23 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
 }
 
 void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // TODO:
-  return;
+  Symbol type = type_decl;
+  if (name == self) {
+    classes->semant_error(errClass) << ": " << "self in formal.\n";
+  } else if (name == SELF_TYPE) {
+    type = classes->lookup(self)->get_class()->get_name();
+  } else if (classes->lookup(type) == NULL) {
+    classes->semant_error(errClass) << ": " << "No class " << type << " in program.\n";  
+  }
+  objects.addid(name, classes->lookup(type)->get_class());
 }
 
 Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
+  objects.enterscope();
   objects.addid(name, classes->lookup(type_decl)->get_class());
   expr->traverse(classes, methods, objects, errClass);
+  objects.exitscope();
   return expr->get_type();
 }
 
