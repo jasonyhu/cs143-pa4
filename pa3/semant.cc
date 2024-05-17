@@ -421,27 +421,31 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     expr_type = objects.lookup(self)->get_name();
   }
   
-  bool isInherit = false;
-  Class_ cur;
-  if (expr_type != SELF_TYPE) {
-    cur = classes->lookup(expr_type)->get_class();
-  } else {
-    cur = objects.lookup(self);
-  }
-
-  std::set<Class_> xSet;
-  xSet.insert(cur);
-
-  while (cur != classes->lookup(Object)->get_class()) {
-    cur = classes->lookup(cur->get_parent())->get_class();
-    xSet.insert(cur);
-    if (xSet.find(classes->lookup(return_type)->get_class()) != xSet.end()) {
-      isInherit = true;
-    }
-  }
-  if (!isInherit) {
+  if (!is_inherited(classes, objects, classes->lookup(return_type)->get_class(), classes->lookup(expr_type)->get_class())) {
     classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
   }
+
+  // bool isInherit = false;
+  // Class_ cur;
+  // if (expr_type != SELF_TYPE) {
+  //   cur = classes->lookup(expr_type)->get_class();
+  // } else {
+  //   cur = objects.lookup(self);
+  // }
+
+  // std::set<Class_> xSet;
+  // xSet.insert(cur);
+
+  // while (cur != classes->lookup(Object)->get_class()) {
+  //   cur = classes->lookup(cur->get_parent())->get_class();
+  //   xSet.insert(cur);
+  //   if (xSet.find(classes->lookup(return_type)->get_class()) != xSet.end()) {
+  //     isInherit = true;
+  //   }
+  // }
+  // if (!isInherit) {
+  //   classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
+  // }
   objects.exitscope();
 }
 
@@ -466,23 +470,25 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
     objects.enterscope();
     objects.addid(self, objects.lookup(self));
 
-    // check if init type is a subtype of x
-    bool isInherit = false;
-    Class_ cur = classes->lookup(init->get_type())->get_class();
-    std::set<Class_> xSet;
-    xSet.insert(cur);
-
-    while (cur != classes->lookup(Object)->get_class()) {
-      cur = classes->lookup(cur->get_parent())->get_class();
-      xSet.insert(cur);
-      if (xSet.find(classes->lookup(type_decl)->get_class()) != xSet.end()) {
-        isInherit = true;
-      }
-    }
-    if (!isInherit) {
-      // throw error, subtyping doesn't exist for a parameter
+    if (!is_inherited(classes, objects, classes->lookup(type_decl)->get_class(), classes->lookup(init->get_type())->get_class())) {
       classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
     }
+    // // check if init type is a subtype of x
+    // bool isInherit = false;
+    // Class_ cur = classes->lookup(init->get_type())->get_class();
+    // std::set<Class_> xSet;
+    // xSet.insert(cur);
+
+    // while (cur != classes->lookup(Object)->get_class()) {
+    //   cur = classes->lookup(cur->get_parent())->get_class();
+    //   xSet.insert(cur);
+    //   if (xSet.find(classes->lookup(type_decl)->get_class()) != xSet.end()) {
+    //     isInherit = true;
+    //   }
+    // }
+    // if (!isInherit) {
+    //   classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+    // }
     objects.exitscope();
   }
 }
@@ -591,24 +597,27 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, MethodTable& methods
   // TODO: make sure method table stores parameters AND return types too
   for (size_t i = 0; i < formals.size(); i++) {
     // represents return type, do not check inheritance
-    bool isInherit = false;
-    Class_ cur = classes->lookup(formals[i])->get_class();
-    std::set<Class_> xSet;
-    xSet.insert(cur);
+    if (!is_inherited(classes, objects, methodFormals->nth(i), classes->lookup(formals[i])->get_class())) {
+      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";    
+    }  
+    // bool isInherit = false;
+    // Class_ cur = classes->lookup(formals[i])->get_class();
+    // std::set<Class_> xSet;
+    // xSet.insert(cur);
 
-    while (cur != classes->lookup(Object)->get_class()) {
-      cur = classes->lookup(cur->get_parent())->get_class();
-      xSet.insert(cur);
-      if (xSet.find(methodFormals->nth(i)) != xSet.end()) {
-        isInherit = true;
-      }
-    }
-    if (!isInherit) {
-      // throw error, subtyping doesn't exist for a parameter
-      classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
-      set_type(Object);
-      return Object;
-    }
+    // while (cur != classes->lookup(Object)->get_class()) {
+    //   cur = classes->lookup(cur->get_parent())->get_class();
+    //   xSet.insert(cur);
+    //   if (xSet.find(methodFormals->nth(i)) != xSet.end()) {
+    //     isInherit = true;
+    //   }
+    // }
+    // if (!isInherit) {
+    //   // throw error, subtyping doesn't exist for a parameter
+    //   classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
+    //   set_type(Object);
+    //   return Object;
+    // }
   }
   set_type(methods.lookup(type_name)->find(name)->second->nth(formals.size())->get_name());
   return methods.lookup(type_name)->find(name)->second->nth(formals.size())->get_name();
@@ -921,14 +930,17 @@ Symbol string_const_class::traverse(ClassTable* classes, MethodTable& methods, O
 
 Symbol new__class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   if (type_name == SELF_TYPE) {
-    set_type(objects.lookup(self)->get_name());
-    return objects.lookup(self)->get_name();
+    set_type(classes->lookup(self)->get_class()->get_name());
+    return classes->lookup(self)->get_class()->get_name();
+  } else if (classes->lookup(type_name) == NULL) {
+    classes->semant_error(errClass) << "Type " << type_name << " is undefined.\n";
   }
   set_type(type_name);
   return type_name;
 }
 
 Symbol isvoid_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
+  e1->traverse(classes, methods, objects, errClass);
   set_type(Bool);
   return Bool;
 }
@@ -938,13 +950,11 @@ Symbol no_expr_class::traverse(ClassTable* classes, MethodTable& methods, Object
   return No_type;
 }
 
-
 Symbol object_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   if (name == self) {
     set_type(SELF_TYPE);
     return SELF_TYPE;
-  }
-  if (objects.lookup(name) == NULL) {
+  } else if (objects.lookup(name) == NULL) {
     classes->semant_error(errClass) << ": " << "Identifier does not refer to object.\n";
     set_type(Object);
     return Object;
