@@ -297,7 +297,6 @@ void ClassTable::install_basic_classes() {
   addid(Int, new InheritanceNode(Int_class));
   addid(IO, new InheritanceNode(IO_class));
   addid(Object, new InheritanceNode(Object_class));
-
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -334,12 +333,20 @@ ostream& ClassTable::semant_error()
 }
 
 void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur) {
-  // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
   ObjectTable objects = ObjectTable();
   objects.enterscope();
   table->addid(self, new InheritanceNode(cur));
-  table->addid(SELF_TYPE, new InheritanceNode(cur));
-  methods.addid(cur->get_name(), new std::map<Symbol, Classes>());
+
+  if (cur->get_name() != Object) {
+    std::map<Symbol, Classes>* parentMap = methods.lookup(table->lookup(cur->get_name())->get_parent());
+    std::map<Symbol, Classes>* childMap = new std::map<Symbol, Classes>();
+    for (const auto& pair : *parentMap) {
+        childMap->insert(pair);
+    }
+    methods.addid(cur->get_name(), childMap);
+  } else {
+    methods.addid(cur->get_name(), new std::map<Symbol, Classes>());
+  }
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     features->nth(i)->traverse(table, methods, objects, cur);
@@ -359,8 +366,9 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   objects.enterscope();
   Classes classesInMap = nil_Classes();
   std::set<Symbol> identifiers;
+
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) { // TODO: add self_type to these types of conditions?
+    if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) {
       classes->semant_error(errClass) << ": " << "Formal parameter " << formals->nth(i)->get_type_decl() << " is an unrecognized class.\n";
     }
     if (classesInMap->len() == 0) {
@@ -374,13 +382,15 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     formals->nth(i)->traverse(classes, methods, objects, errClass);
     identifiers.insert(formals->nth(i)->get_name());
   }
+
   classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(return_type)->get_class()));
-  methods.lookup(classes->lookup(self)->get_class()->get_name())->insert({name, classesInMap});
+  // replaces existing method OR inserts a new one
+  (*methods.lookup(classes->lookup(self)->get_class()->get_name()))[name] = classesInMap;
   expr->traverse(classes, methods, objects, errClass);
   Symbol expr_type = expr->get_type();
-  if (expr_type == SELF_TYPE) {
-    expr_type = classes->lookup(self)->get_class()->get_name();
-  }
+  // if (expr_type == SELF_TYPE) {
+  //   expr_type = classes->lookup(self)->get_class()->get_name();
+  // }
   
   bool isInherit = false;
   Class_ cur = classes->lookup(expr_type)->get_class();
@@ -566,6 +576,7 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
     formalClasses.push_back(actual->nth(i)->get_type());
   }
   // check for dispatch caller type
+  // TODO: why did i add self-patch here
   Symbol caller_type = classes->lookup(self)->get_class()->get_name();
   if (actual->nth(0)->get_type() != SELF_TYPE) {
     caller_type = expr->get_type();
@@ -901,6 +912,12 @@ void program_class::semant() {
   // 
   MethodTable methods = MethodTable();
   methods.enterscope();
+  classtable->lookup(Str)->get_class()->traverse(classtable, methods, classtable->lookup(Str)->get_class());
+  classtable->lookup(Bool)->get_class()->traverse(classtable, methods, classtable->lookup(Bool)->get_class());
+  classtable->lookup(Int)->get_class()->traverse(classtable, methods, classtable->lookup(Int)->get_class());
+  classtable->lookup(IO)->get_class()->traverse(classtable, methods, classtable->lookup(IO)->get_class());
+  classtable->lookup(Object)->get_class()->traverse(classtable, methods, classtable->lookup(Object)->get_class());
+
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     classes->nth(i)->traverse(classtable, methods, classes->nth(i));
   }
