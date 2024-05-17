@@ -181,28 +181,34 @@ bool is_inherited(ClassTable& classes, ObjectTable& objects, Class_ ancestor, Cl
   return false;
 }
 
-Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
-  // TODO: add the three other cases involving SELF_TYPE
+Class_ lub(ClassTable* classes, ObjectTable& objects, Class_ x, Class_ y) {
   // least common ancestor in the inheritance tree
-  std::set<Class_> xSet;
-  xSet.insert(classes->lookup(Object)->get_class());
-  // add x's inheritance tree to the set
-  Class_ cur = x;
-  xSet.insert(cur);
-  while (cur != classes->lookup(Object)->get_class()) {
-    cur = classes->lookup(x->get_parent())->get_class();
-    xSet.insert(cur);
+  if (x->get_name() == SELF_TYPE) {
+    x = objects.lookup(self);
   }
-  cur = y;
-  xSet.insert(cur);
-  // check for collision
-  while (cur != classes->lookup(Object)->get_class()) {
-    cur = classes->lookup(y->get_parent())->get_class();
-    if (xSet.find(cur) != xSet.end()) {
-      return cur;
+  if (y->get_name() == SELF_TYPE) {
+    y = objects.lookup(self);
+  }
+  std::list<Class_> x_chain;
+  std::list<Class_> y_chain;
+
+  while (x->get_name() != No_class) {
+    x_chain.push_front(x);
+    x = classes->lookup(x->get_parent())->get_class();
+  }
+  while (y->get_name() != No_class) {
+    y_chain.push_front(y);
+    y = classes->lookup(y->get_parent())->get_class();
+  }
+
+  Class_ ret = classes->lookup(Object)->get_class();
+  for (int i = 0; i < x_chain.size(); i++) {
+    if (x_chain.front() != y_chain.front()) {
+      break;
     }
+    ret = x_chain.front();
   }
-  return classes->lookup(Object)->get_class();
+  return ret;
 }
 
 
@@ -660,8 +666,8 @@ Symbol cond_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     set_type(Object);
     return Object;
   }
-  set_type(lub(classes, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name());
-  return lub(classes, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name();
+  set_type(lub(classes, objects, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name());
+  return lub(classes, objects, classes->lookup(then_exp->get_type())->get_class(), classes->lookup(else_exp->get_type())->get_class())->get_name();
 }
 
 Symbol loop_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
@@ -694,7 +700,7 @@ Symbol typcase_class::traverse(ClassTable* classes, MethodTable& methods, Object
     if (return_type == NULL) {
       return_type = classes->lookup(cases->nth(i)->get_name())->get_class()->get_name();
     } else {
-      return_type = lub(classes, classes->lookup(return_type)->get_class(), objects.lookup(cases->nth(i)->get_name()))->get_name();
+      return_type = lub(classes, objects, classes->lookup(return_type)->get_class(), objects.lookup(cases->nth(i)->get_name()))->get_name();
     }
     objects.exitscope();
   }
