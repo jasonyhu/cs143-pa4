@@ -164,6 +164,23 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   }
 }
 
+bool is_inherited(ClassTable& classes, ObjectTable& objects, Class_ ancestor, Class_ child) {
+  if (ancestor->get_name() == SELF_TYPE) {
+    return child->get_name() == SELF_TYPE;
+  }
+  if (child->get_name() == SELF_TYPE) {
+    child = objects.lookup(self);
+  }
+  
+  while (child->get_parent()->get_string() != No_type->get_string()) {
+    if (child == ancestor) {
+      return true;
+    }
+    child = classes.lookup(child->get_parent())->get_class();
+  }
+  return false;
+}
+
 Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
   // TODO: add the three other cases involving SELF_TYPE
   // least common ancestor in the inheritance tree
