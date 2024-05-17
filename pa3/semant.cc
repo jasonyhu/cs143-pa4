@@ -383,7 +383,9 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   if (classes->lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
-  if (methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) {
+  // TOOD: ONLY THROW THE ERROR WHEN THE METHOD IS NON-INHERITED
+  if ((methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) &&
+      (methods.lookup(errClass->get_name())->find(name) != methods.lookup(classes->lookup(errClass->get_name())->get_parent())->find(name))) {
     classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
   }
 
@@ -648,12 +650,12 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
 
   // check for dispatch caller type
   // TODO: why did i add self-patch here
-  Symbol caller_type = objects.lookup(self)->get_name();
-  if (expr->get_type() != SELF_TYPE) {
-    caller_type = expr->get_type();
-  }
+  Symbol caller_type = expr->get_type();
 
   // add method to signature
+  if (expr->get_type() == SELF_TYPE) {
+    caller_type = objects.lookup(self)->get_name();
+  }
   Classes methodFormals = methods.lookup(caller_type)->find(name)->second;
   // TODO: FIX THIS
   // if (methodParams = methods.lookup(caller_type).end() || methodParams->second != formalClasses) {
@@ -685,6 +687,9 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
     }
   }
   Symbol return_type = expr->get_type();
+  if (return_type == SELF_TYPE) {
+    return_type = objects.lookup(self)->get_name();
+  }
   // what if dispatch has diff # of arguments than in method table? possibility of error
   if (methods.lookup(caller_type)->find(name) == methods.lookup(caller_type)->end()) {
     classes->semant_error(errClass) << ": " << "Function not found in caller.\n";
@@ -989,14 +994,27 @@ void program_class::semant() {
     cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
   }
+  MethodTable methods = MethodTable();
+  methods.enterscope();
+  std::map<Symbol, list_node<Class__class*>*>* objMethods = new std::map<Symbol, list_node<Class__class*>*>();
+  std::map<Symbol, list_node<Class__class*>*>* ioMethods = new std::map<Symbol, list_node<Class__class*>*>();
+  (*objMethods)[cool_abort] = single_Classes(classtable->lookup(Object)->get_class());
+  (*objMethods)[type_name] = single_Classes(classtable->lookup(Str)->get_class());
+  (*objMethods)[::copy] = single_Classes(classtable->lookup(Object)->get_class());
+
+  (*ioMethods)[out_string] = append_Classes(single_Classes(classtable->lookup(Str)->get_class()), single_Classes(classtable->lookup(IO)->get_class()));
+  (*ioMethods)[out_int] = append_Classes(single_Classes(classtable->lookup(Int)->get_class()), single_Classes(classtable->lookup(Str)->get_class()));
+  (*ioMethods)[in_string] = single_Classes(classtable->lookup(Str)->get_class());
+  (*ioMethods)[in_int] = single_Classes(classtable->lookup(Int)->get_class());
+
+  methods.addid(IO, ioMethods);
+  methods.addid(Object, objMethods);
 
   // use dfs/bfs to go through each class + have info that we need (ex: attributes)
   // traverse through the AST of each class and do the type checking
   // type checking : assign types to each node of the AST
   // figure out the type of the expression/feature in the AST
   // 
-  MethodTable methods = MethodTable();
-  methods.enterscope();
 
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     classes->nth(i)->traverse(classtable, methods, classes->nth(i));
