@@ -403,10 +403,12 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   objects.exitscope();
 }
 
-Symbol attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
+void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   if (classes->lookup(type_decl) == NULL) {
-    // TODO: return error
+    classes->semant_error(errClass) << "Class " << type_decl->get_string() << " of attribute " << name->get_string() << " is undefined.\n";
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
   }
   objects.addid(name, classes->lookup(type_decl)->get_class());
   init->traverse(classes, methods, objects, errClass);
