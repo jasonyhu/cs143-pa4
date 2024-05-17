@@ -61,7 +61,7 @@ class ClassTable;
   virtual Symbol get_parent() = 0; \
   virtual Symbol get_name() = 0; \
   virtual Features get_features() = 0; \
-  virtual void traverse(ClassTable* table, Class_ cur) = 0; \
+  virtual void traverse(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, Class_ cur) = 0; \
   virtual void dump_with_types(ostream&,int) = 0;
 
 #define class__EXTRAS				       \
@@ -69,7 +69,7 @@ class ClassTable;
   Symbol get_parent() { return parent; } \
   Symbol get_name() { return name; } \
   Features get_features() { return features; } \
-  void traverse(ClassTable* table, Class_ cur); \
+  void traverse(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, Class_ cur); \
   void dump_with_types(ostream&,int);
 
 #define Feature_EXTRAS					\
@@ -87,8 +87,6 @@ class ClassTable;
   virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
 
 #define formal_EXTRAS				  \
-  Symbol get_name() { return name; } \
-  Symbol get_type() { return type_decl; } \
   void dump_with_types(ostream&,int); \
   Symbol get_name() { return name; } \
   Symbol get_type_decl() { return type_decl; } \

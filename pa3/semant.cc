@@ -171,11 +171,13 @@ Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
   xSet.insert(classes->lookup(Object)->get_class());
   // add x's inheritance tree to the set
   Class_ cur = x;
+  xSet.insert(cur);
   while (cur != classes->lookup(Object)->get_class()) {
     cur = classes->lookup(x->get_parent())->get_class();
     xSet.insert(cur);
   }
   cur = y;
+  xSet.insert(cur);
   // check for collision
   while (cur != classes->lookup(Object)->get_class()) {
     cur = classes->lookup(y->get_parent())->get_class();
@@ -331,13 +333,13 @@ ostream& ClassTable::semant_error()
     return error_stream;
 }
 
-void class__class::traverse(ClassTable* table, Class_ cur) {
+void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur) {
   // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
   // TODO: move methods to global scope
-  MethodTable methods = MethodTable();
   ObjectTable objects = ObjectTable();
   objects.enterscope();
   table->addid(self, new InheritanceNode(cur));
+  methods.addid(cur->get_name(), new std::map<Symbol, Classes>());
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     // TODO: pass attribute (objects) table to further recursive calls
@@ -351,25 +353,37 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   // ADD METHOD NAME -- tentatively done
   // add method to signature -- what does this mean?
   // TODO: whenever we do a lookup, CHEC every time if the class is unavailable and throw an error (for every function)
-  if (objects.lookup(return_type) == NULL && return_type != SELF_TYPE) {
+  if (classes->lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
   objects.addid(name, objects.lookup(return_type));
   objects.enterscope();
-  std::map<Symbol, Classes> formal_map;
+  Classes classesInMap = nil_Classes();
+  std::set<Symbol> identifiers;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    if (formal_map.count(formals->nth(i)->get_name())) {
-      classes->semant_error(errClass) << ": " << "Duplicate formal .\n";
+    if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) { // TODO: add self_type to these types of conditions?
+      // THROW ERROR: 
     }
-    // formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
+    if (classesInMap->len() == 0) {
+      classesInMap = single_Classes(classes->lookup(formals->nth(i)->get_type_decl())->get_class());
+    } else {
+      classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(formals->nth(i)->get_type_decl())->get_class()));
+    }
+    if (identifiers.find(formals->nth(i)->get_name()) != identifiers.end()) {
+      classes->semant_error(errClass) << ": " << "Duplicate identifier in formal parameter list .\n";
+    }
     formals->nth(i)->traverse(classes, methods, objects, errClass);
+    identifiers.insert(formals->nth(i)->get_name());
   }
+  methods.lookup(classes->lookup(self)->get_class()->get_name())->insert({name, classesInMap});
   expr->traverse(classes, methods, objects, errClass);
   Symbol expr_type = expr->get_type();
   
   bool isInherit = false;
   Class_ cur = classes->lookup(expr_type)->get_class();
   std::set<Class_> xSet;
+  xSet.insert(cur);
+
   while (cur != classes->lookup(Object)->get_class()) {
     cur = classes->lookup(cur->get_parent())->get_class();
     xSet.insert(cur);
@@ -398,6 +412,8 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
     bool isInherit = false;
     Class_ cur = classes->lookup(init->get_type())->get_class();
     std::set<Class_> xSet;
+    xSet.insert(cur);
+
     while (cur != classes->lookup(Object)->get_class()) {
       cur = classes->lookup(cur->get_parent())->get_class();
       xSet.insert(cur);
@@ -449,13 +465,15 @@ Symbol assign_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
 
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
+  // TODO: now add the object itself to subtyping... forgot to include
 
   // add x's inheritance tree to the set
   Class_ cur = classes->lookup(expr->get_type())->get_class();
+  xSet.insert(cur);
   while (cur != classes->lookup(Object)->get_class()) {
     cur = classes->lookup(cur->get_parent())->get_class();
     xSet.insert(cur);
-    if (xSet.find(classes->lookup(name)->get_class()) != xSet.end()) {
+    if (xSet.find(classes->lookup(expr->get_type())->get_class()) != xSet.end()) {
       set_type(expr->get_type());
       return expr->get_type();
     }
@@ -479,6 +497,8 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, MethodTable& methods
   bool isInherit = false;
   Class_ cur = classes->lookup(actual->nth(0)->get_type())->get_class();
   std::set<Class_> xSet;
+  xSet.insert(cur);
+
   while (cur != classes->lookup(Object)->get_class()) {
     cur = classes->lookup(cur->get_parent())->get_class();
     xSet.insert(cur);
@@ -507,6 +527,8 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, MethodTable& methods
     bool isInherit = false;
     Class_ cur = classes->lookup(formals[i])->get_class();
     std::set<Class_> xSet;
+    xSet.insert(cur);
+
     while (cur != classes->lookup(Object)->get_class()) {
       cur = classes->lookup(cur->get_parent())->get_class();
       xSet.insert(cur);
@@ -553,6 +575,8 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
     bool isInherit = false;
     Class_ cur = classes->lookup(formals[i])->get_class();
     std::set<Class_> xSet;
+    xSet.insert(cur);
+
     while (cur != classes->lookup(Object)->get_class()) {
       cur = classes->lookup(cur->get_parent())->get_class();
       xSet.insert(cur);
@@ -654,6 +678,7 @@ Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
   // IF INIT EXISTS
   if (init->get_type() != No_type) {
     bool isInherit = false;
+    xSet.insert(cur);
     while (cur != classes->lookup(Object)->get_class()) {
       cur = classes->lookup(cur->get_parent())->get_class();
       xSet.insert(cur);
@@ -822,8 +847,8 @@ Symbol object_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
     set_type(Object);
     return Object;
   }
-  set_type(name);
-  return name;
+  set_type(objects.lookup(name)->get_name());
+  return objects.lookup(name)->get_name();
 }
 
 
@@ -858,8 +883,10 @@ void program_class::semant() {
   // type checking : assign types to each node of the AST
   // figure out the type of the expression/feature in the AST
   // 
+  MethodTable methods = MethodTable();
+  methods.enterscope();
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    classes->nth(i)->traverse(classtable, classes->nth(i));
+    classes->nth(i)->traverse(classtable, methods, classes->nth(i));
   }
 
 }
