@@ -721,8 +721,6 @@ Symbol loop_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   body->traverse(classes, methods, objects, errClass);
   if (pred->get_type() != Bool) {
     classes->semant_error(errClass) << ": " << "First expression is not a boolean.\n";
-    set_type(Object);
-    return Object;
   }
   set_type(Object);
   return Object;

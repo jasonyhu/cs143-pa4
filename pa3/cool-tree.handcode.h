@@ -101,7 +101,7 @@ class ClassTable;
 #define branch_EXTRAS					\
   void dump_with_types(ostream&, int); \
   Symbol get_name() { return name; }; \
-  Symbol get_type_decl() { return name; }; \
+  Symbol get_type_decl() { return type_decl; }; \
   Symbol traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ cur); 
 
 #define Expression_EXTRAS					\
