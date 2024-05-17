@@ -383,7 +383,9 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   if (classes->lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
-  if (methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) {
+  // TOOD: ONLY THROW THE ERROR WHEN THE METHOD IS NON-INHERITED
+  if ((methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) &&
+      (methods.lookup(errClass->get_name())->find(name) != methods.lookup(classes->lookup(errClass->get_name())->get_parent())->find(name))) {
     classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
   }
 
