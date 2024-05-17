@@ -9,10 +9,8 @@ class C {
            }
 	};
 };
-
-Class Main {
+class Main {
 	main():C {
 	  (new C).init(1,true)
 	};
 };
-
