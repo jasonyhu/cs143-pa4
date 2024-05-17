@@ -359,13 +359,15 @@ void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur)
   ObjectTable objects = ObjectTable();
   // TODO: add inheritance for objects / attributes
   objects.enterscope();
-  table->addid(self, new InheritanceNode(cur));
+  objects.addid(self, cur);
 
   if (cur->get_name() != Object) {
     std::map<Symbol, Classes>* parentMap = methods.lookup(table->lookup(cur->get_name())->get_parent());
     std::map<Symbol, Classes>* childMap = new std::map<Symbol, Classes>();
-    for (const auto& pair : *parentMap) {
-        childMap->insert(pair);
+    if (parentMap) {
+      for (const auto& pair : *parentMap) {
+          childMap->insert(pair);
+      }
     }
     methods.addid(cur->get_name(), childMap);
   } else {
@@ -386,8 +388,8 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
   }
 
-  objects.addid(name, objects.lookup(return_type));
   objects.enterscope();
+  objects.addid(self, objects.lookup(self));
   Classes classesInMap = nil_Classes();
   std::set<Symbol> identifiers;
 
@@ -407,17 +409,27 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     identifiers.insert(formals->nth(i)->get_name());
   }
   // TODO: add if condition to check that overriding can only happen if the # of arguments, types of formal params, and return type are the same
-  classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(return_type)->get_class()));
+  if (return_type != SELF_TYPE) {
+    classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(return_type)->get_class()));
+  } else {
+    classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(self)->get_class()));
+  }
   // replaces existing method OR inserts a new one
-  (*methods.lookup(classes->lookup(self)->get_class()->get_name()))[name] = classesInMap;
+  (*methods.lookup(objects.lookup(self)->get_name()))[name] = classesInMap;
   expr->traverse(classes, methods, objects, errClass);
   Symbol expr_type = expr->get_type();
-  // if (expr_type == SELF_TYPE) {
-  //   expr_type = classes->lookup(self)->get_class()->get_name();
-  // }
+  if (return_type == SELF_TYPE) {
+    expr_type = objects.lookup(self)->get_name();
+  }
   
   bool isInherit = false;
-  Class_ cur = classes->lookup(expr_type)->get_class();
+  Class_ cur;
+  if (expr_type != SELF_TYPE) {
+    cur = classes->lookup(expr_type)->get_class();
+  } else {
+    cur = objects.lookup(self);
+  }
+
   std::set<Class_> xSet;
   xSet.insert(cur);
 
@@ -453,7 +465,7 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
   init->traverse(classes, methods, objects, errClass);
   if (init->get_type() != No_type) {
     objects.enterscope();
-    objects.addid(self, classes->lookup(self)->get_class());
+    objects.addid(self, objects.lookup(self));
 
     // check if init type is a subtype of x
     bool isInherit = false;
@@ -481,7 +493,7 @@ void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   if (name == self) {
     classes->semant_error(errClass) << ": " << "self in formal.\n";
   } else if (name == SELF_TYPE) {
-    type = classes->lookup(self)->get_class()->get_name();
+    type = objects.lookup(self)->get_name();
   } else if (classes->lookup(type) == NULL) {
     classes->semant_error(errClass) << ": " << "No class " << type << " in program.\n";  
   }
@@ -615,7 +627,7 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
   }
   // check for dispatch caller type
   // TODO: why did i add self-patch here
-  Symbol caller_type = classes->lookup(self)->get_class()->get_name();
+  Symbol caller_type = objects.lookup(self)->get_name();
   if (actual->nth(0)->get_type() != SELF_TYPE) {
     caller_type = expr->get_type();
   }
@@ -733,7 +745,7 @@ Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
   // init's type must inherit x
   Symbol x_type = type_decl;
   if (type_decl == SELF_TYPE) {
-    x_type = classes->lookup(self)->get_class()->get_name();
+    x_type = objects.lookup(self)->get_name();
   }
   objects.addid(identifier, classes->lookup(x_type)->get_class());
   std::set<Class_> xSet;
@@ -890,8 +902,8 @@ Symbol string_const_class::traverse(ClassTable* classes, MethodTable& methods, O
 
 Symbol new__class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   if (type_name == SELF_TYPE) {
-    set_type(classes->lookup(self)->get_class()->get_name());
-    return classes->lookup(self)->get_class()->get_name();
+    set_type(objects.lookup(self)->get_name());
+    return objects.lookup(self)->get_name();
   }
   set_type(type_name);
   return type_name;
@@ -941,7 +953,7 @@ void program_class::semant() {
   initialize_constants();
 
     /* ClassTable constructor may do some semantic analysis */
-
+  
   ClassTableP classtable = new ClassTable(classes);
 
   if (classtable->errors()) {
@@ -956,11 +968,6 @@ void program_class::semant() {
   // 
   MethodTable methods = MethodTable();
   methods.enterscope();
-  classtable->lookup(Str)->get_class()->traverse(classtable, methods, classtable->lookup(Str)->get_class());
-  classtable->lookup(Bool)->get_class()->traverse(classtable, methods, classtable->lookup(Bool)->get_class());
-  classtable->lookup(Int)->get_class()->traverse(classtable, methods, classtable->lookup(Int)->get_class());
-  classtable->lookup(IO)->get_class()->traverse(classtable, methods, classtable->lookup(IO)->get_class());
-  classtable->lookup(Object)->get_class()->traverse(classtable, methods, classtable->lookup(Object)->get_class());
 
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     classes->nth(i)->traverse(classtable, methods, classes->nth(i));
