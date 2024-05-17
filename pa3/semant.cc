@@ -335,35 +335,33 @@ ostream& ClassTable::semant_error()
 
 void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur) {
   // TODO: "a method need not be defined in the class in which it is used, but in some parent class"
-  // TODO: move methods to global scope
   ObjectTable objects = ObjectTable();
   objects.enterscope();
   table->addid(self, new InheritanceNode(cur));
+  table->addid(SELF_TYPE, new InheritanceNode(cur));
   methods.addid(cur->get_name(), new std::map<Symbol, Classes>());
 
   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    // TODO: pass attribute (objects) table to further recursive calls
     features->nth(i)->traverse(table, methods, objects, cur);
   }
   objects.exitscope();
 }
 
 void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // ADD OBJECT NAME TO TABLE -- tentatively done
-  // ADD METHOD NAME -- tentatively done
-  // add method to signature -- what does this mean?
-  // TODO: whenever we do a lookup, CHEC every time if the class is unavailable and throw an error (for every function)
-  // TODO: do self_type checks for lookups
   if (classes->lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
   }
+  if (methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) {
+    classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
+  }
+
   objects.addid(name, objects.lookup(return_type));
   objects.enterscope();
   Classes classesInMap = nil_Classes();
   std::set<Symbol> identifiers;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) { // TODO: add self_type to these types of conditions?
-      // THROW ERROR: 
+      classes->semant_error(errClass) << ": " << "Formal parameter " << formals->nth(i)->get_type_decl() << " is an unrecognized class.\n";
     }
     if (classesInMap->len() == 0) {
       classesInMap = single_Classes(classes->lookup(formals->nth(i)->get_type_decl())->get_class());
@@ -399,7 +397,6 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   if (!isInherit) {
     classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
   }
-  // methods.addid(name, formal_map);
   objects.exitscope();
 }
 
@@ -410,9 +407,13 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
     cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
   }
+  if (objects.lookup(name) != NULL) {
+    classes->semant_error(errClass) << "Attribute " << name->get_string() <<  " is already defined.\n";
+  }
   objects.addid(name, classes->lookup(type_decl)->get_class());
   init->traverse(classes, methods, objects, errClass);
   if (init->get_type() != No_type) {
+    objects.enterscope();
     objects.addid(self, classes->lookup(self)->get_class());
 
     // check if init type is a subtype of x
@@ -432,6 +433,7 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
       // throw error, subtyping doesn't exist for a parameter
       classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
     }
+    objects.exitscope();
   }
 }
 
@@ -448,8 +450,10 @@ void formal_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
 }
 
 Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // ADD OBJECT NAME TO TABLE
   objects.enterscope();
+  if (classes->lookup(type_decl) == NULL) {
+    classes->semant_error(errClass) << ": " << "Invalid type for branch.\n";
+  }
   objects.addid(name, classes->lookup(type_decl)->get_class());
   expr->traverse(classes, methods, objects, errClass);
   objects.exitscope();
@@ -578,7 +582,6 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
 
   Classes methodFormals = methods.lookup(caller_type)->find(name)->second;
   // check if each parameter in dispatch call inherits declared parameter
-  // TODO: make sure method table stores parameters AND return types too
   for (size_t i = 0; i < formalClasses.size(); i++) {
     // represents return type, do not check inheritance
     bool isInherit = false;
@@ -669,7 +672,6 @@ Symbol block_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTa
 
 Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
-  // note: in new scope, match self with type of self in objects table (class)
   init->traverse(classes, methods, objects, errClass);
   body->traverse(classes, methods, objects, errClass);
 
@@ -701,6 +703,7 @@ Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
       return Object;
     }
   }
+  objects.exitscope();
   set_type(body->get_type());
   return body->get_type();
 
