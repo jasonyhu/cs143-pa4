@@ -351,6 +351,7 @@ ostream& ClassTable::semant_error()
 
 void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur) {
   ObjectTable objects = ObjectTable();
+  // TODO: add inheritance for objects / attributes
   objects.enterscope();
   table->addid(self, new InheritanceNode(cur));
 
@@ -399,7 +400,7 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     formals->nth(i)->traverse(classes, methods, objects, errClass);
     identifiers.insert(formals->nth(i)->get_name());
   }
-
+  // TODO: add if condition to check that overriding can only happen if the # of arguments, types of formal params, and return type are the same
   classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(return_type)->get_class()));
   // replaces existing method OR inserts a new one
   (*methods.lookup(classes->lookup(self)->get_class()->get_name()))[name] = classesInMap;
@@ -428,7 +429,6 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
 }
 
 void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // ADD OBJECT NAME TO TABLE
   if (classes->lookup(type_decl) == NULL) {
     classes->semant_error(errClass) << "Class " << type_decl->get_string() << " of attribute " << name->get_string() << " is undefined.\n";
     cerr << "Compilation halted due to static semantic errors." << endl;
@@ -436,7 +436,13 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
   }
   if (objects.lookup(name) != NULL) {
     classes->semant_error(errClass) << "Attribute " << name->get_string() <<  " is already defined.\n";
+    return;
   }
+  if (name == self) {
+    classes->semant_error(errClass) << "Attribute cannot be named 'self'.\n";
+    return;
+  }
+
   objects.addid(name, classes->lookup(type_decl)->get_class());
   init->traverse(classes, methods, objects, errClass);
   if (init->get_type() != No_type) {
@@ -480,6 +486,11 @@ Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
   objects.enterscope();
   if (classes->lookup(type_decl) == NULL) {
     classes->semant_error(errClass) << ": " << "Invalid type for branch.\n";
+    return Object;
+  }
+  if (name == self) {
+    classes->semant_error(errClass) << ": " << "Cannot bind self in a case.\n";
+    return Object;
   }
   objects.addid(name, classes->lookup(type_decl)->get_class());
   expr->traverse(classes, methods, objects, errClass);
@@ -500,7 +511,11 @@ Symbol assign_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
     set_type(Object);
     return Object;
   }
-
+  if (objects.lookup(name)->get_name() == self) {
+    classes->semant_error(errClass) << ": " << "Cannot assign to self.\n";
+    set_type(Object);
+    return Object;
+  }
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
   // TODO: now add the object itself to subtyping... forgot to include
@@ -651,6 +666,7 @@ Symbol cond_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
 
 Symbol loop_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   pred->traverse(classes, methods, objects, errClass);
+  // TODO: IF PREDICATE IS FALSE, LOOP TERMINATES AND VOID IS RETURNED
   body->traverse(classes, methods, objects, errClass);
   if (pred->get_type() != Bool) {
     classes->semant_error(errClass) << ": " << "First expression is not a boolean.\n";
@@ -702,7 +718,11 @@ Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
   // ADD OBJECT NAME TO TABLE
   init->traverse(classes, methods, objects, errClass);
   body->traverse(classes, methods, objects, errClass);
-
+  if (identifier == self) {
+    classes->semant_error(errClass) << ": " << "Cannot bind self in a let.\n";
+    set_type(Object);
+    return Object;
+  }
   objects.enterscope();
   // init's type must inherit x
   Symbol x_type = type_decl;
@@ -714,6 +734,7 @@ Symbol let_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTabl
   xSet.insert(classes->lookup(Object)->get_class());
 
   Class_ cur = classes->lookup(init->get_type())->get_class();
+
   // IF INIT EXISTS
   if (init->get_type() != No_type) {
     bool isInherit = false;
@@ -937,6 +958,11 @@ void program_class::semant() {
 
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     classes->nth(i)->traverse(classtable, methods, classes->nth(i));
+    if (classes->nth(i)->get_name() == Main) {
+      if (methods.lookup(Main)->find(main_meth) == methods.lookup(Main)->end()) {
+        classtable->semant_error(classes->nth(i)) << ": " << "Main class does not contain main method.\n";
+      }
+    }
   }
 
 }
