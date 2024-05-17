@@ -181,30 +181,34 @@ bool is_inherited(ClassTable& classes, ObjectTable& objects, Class_ ancestor, Cl
   return false;
 }
 
-Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
+Class_ lub(ClassTable* classes, ObjectTable* objects, Class_ x, Class_ y) {
   // least common ancestor in the inheritance tree
-  if (x->get_name() == SELF_TYPE && y->get_name() == SELF_TYPE) {
-    return x;
+  if (x->get_name() == SELF_TYPE) {
+    x = objects->lookup(self);
   }
-  std::set<Class_> xSet;
-  xSet.insert(classes->lookup(Object)->get_class());
-  // add x's inheritance tree to the set
-  Class_ cur = x;
-  xSet.insert(cur);
-  while (cur != classes->lookup(Object)->get_class()) {
-    cur = classes->lookup(x->get_parent())->get_class();
-    xSet.insert(cur);
+  if (y->get_name() == SELF_TYPE) {
+    y = objects->lookup(self);
   }
-  cur = y;
-  xSet.insert(cur);
-  // check for collision
-  while (cur != classes->lookup(Object)->get_class()) {
-    cur = classes->lookup(y->get_parent())->get_class();
-    if (xSet.find(cur) != xSet.end()) {
-      return cur;
+  std::list<Class_> x_chain;
+  std::list<Class_> y_chain;
+
+  while (x->get_name() != No_class) {
+    x_chain.push_front(x);
+    x = classes->lookup(x->get_parent())->get_class();
+  }
+  while (y->get_name() != No_class) {
+    y_chain.push_front(y);
+    y = classes->lookup(y->get_parent())->get_class();
+  }
+
+  Class_ ret = classes->lookup(Object)->get_class();
+  for (int i = 0; i < x_chain.size(); i++) {
+    if (x_chain.front() != y_chain.front()) {
+      break;
     }
+    ret = x_chain.front();
   }
-  return classes->lookup(Object)->get_class();
+  return ret;
 }
 
 
