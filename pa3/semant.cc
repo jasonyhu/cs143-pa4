@@ -361,7 +361,7 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
     if (formal_map.count(formals->nth(i)->get_name())) {
       classes->semant_error(errClass) << ": " << "Duplicate formal .\n";
     }
-    // formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
+    formal_map.insert({formals->nth(i)->get_name(), classes->lookup(formals->nth(i)->get_type_decl())->get_class()});
     formals->nth(i)->traverse(classes, methods, objects, errClass);
   }
   expr->traverse(classes, methods, objects, errClass);
@@ -384,7 +384,7 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   objects.exitscope();
 }
 
-void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
+Symbol attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   // ADD OBJECT NAME TO TABLE
   if (classes->lookup(type_decl) == NULL) {
     // TODO: return error

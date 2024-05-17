@@ -46,6 +46,10 @@ class A inherits AE {
 
 };
 
+class P {
+
+};
+
 (* class C inherits A {
 	a : Int;
 	b : Bool;
@@ -83,7 +87,5 @@ Class Main {
 	 }
 	};
 };
-
--- what if a class tries to inherit itself?
 
 *)

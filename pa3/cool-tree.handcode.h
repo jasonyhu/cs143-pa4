@@ -90,7 +90,6 @@ class ClassTable;
   Symbol get_name() { return name; } \
   Symbol get_type() { return type_decl; } \
   void dump_with_types(ostream&,int); \
-  Symbol get_name() { return name; } \
   Symbol get_type_decl() { return type_decl; } \
   void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
 
