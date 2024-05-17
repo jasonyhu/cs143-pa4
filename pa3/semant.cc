@@ -164,21 +164,20 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
   }
 }
 
-bool is_inherited(ClassTable& classes, ObjectTable& objects, Class_ ancestor, Class_ child) {
+bool is_inherited(ClassTable* classes, ObjectTable& objects, Class_ ancestor, Class_ child) {
   if (ancestor->get_name() == SELF_TYPE) {
     return child->get_name() == SELF_TYPE;
   }
   if (child->get_name() == SELF_TYPE) {
     child = objects.lookup(self);
   }
-  
-  while (child->get_parent()->get_string() != No_type->get_string()) {
+  while (child->get_parent() != No_class) {
     if (child == ancestor) {
       return true;
     }
-    child = classes.lookup(child->get_parent())->get_class();
+    child = classes->lookup(child->get_parent())->get_class();
   }
-  return false;
+  return child == ancestor;
 }
 
 Class_ lub(ClassTable* classes, ObjectTable& objects, Class_ x, Class_ y) {
@@ -192,17 +191,17 @@ Class_ lub(ClassTable* classes, ObjectTable& objects, Class_ x, Class_ y) {
   std::list<Class_> x_chain;
   std::list<Class_> y_chain;
 
-  while (x->get_name() != No_class) {
+  while (x->get_name() != Object) {
     x_chain.push_front(x);
     x = classes->lookup(x->get_parent())->get_class();
   }
-  while (y->get_name() != No_class) {
+  while (y->get_name() != Object) {
     y_chain.push_front(y);
     y = classes->lookup(y->get_parent())->get_class();
   }
 
   Class_ ret = classes->lookup(Object)->get_class();
-  for (int i = 0; i < x_chain.size(); i++) {
+  for (size_t i = 0; i < x_chain.size(); i++) {
     if (x_chain.front() != y_chain.front()) {
       break;
     }
