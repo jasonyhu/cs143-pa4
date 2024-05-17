@@ -517,8 +517,7 @@ Symbol branch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
 }
 
 Symbol Expression_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
-  // TODO: is there really anything to do
-  return No_type;
+  return Object;
 }
 
 Symbol assign_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
@@ -536,7 +535,6 @@ Symbol assign_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
   }
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
-  // TODO: now add the object itself to subtyping... forgot to include
 
   // add x's inheritance tree to the set
   Class_ cur = classes->lookup(expr->get_type())->get_class();
@@ -551,7 +549,6 @@ Symbol assign_class::traverse(ClassTable* classes, MethodTable& methods, ObjectT
   }
   // AFTER PROCESSING E, REMOVE DEFINITION OF X AND RESTORE OLD DEFINITION OF X
 
-  // throw error
   classes->semant_error(errClass) << ": " << "Expression type does not conform to identifier type.\n";
   set_type(Object);
   return Object;
@@ -620,20 +617,36 @@ Symbol static_dispatch_class::traverse(ClassTable* classes, MethodTable& methods
 
 Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   expr->traverse(classes, methods, objects, errClass);
-  std::vector<Symbol> formalClasses;
+
+  Classes types = nil_Classes();
+  std::set<Symbol> identifiers;
+
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
+    // if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) {
+    //   classes->semant_error(errClass) << ": " << "Formal parameter " << formals->nth(i)->get_type_decl() << " is an unrecognized class.\n";
+    // }
     actual->nth(i)->traverse(classes, methods, objects, errClass);
-    formalClasses.push_back(actual->nth(i)->get_type());
+    identifiers.insert(actual->nth(i)->get_type());
+    if (types->len() == 0) {
+      types = single_Classes(classes->lookup(actual->nth(i)->get_type())->get_class());
+    } else {
+      types = append_Classes(types, single_Classes(classes->lookup(actual->nth(i)->get_type())->get_class()));
+    }
+    // if (identifiers.find(actual->nth(i)->get_name()) != identifiers.end()) {
+    //   classes->semant_error(errClass) << ": " << "Duplicate identifier in formal parameter list .\n";
+    // }
+    
   }
+
   // check for dispatch caller type
   // TODO: why did i add self-patch here
   Symbol caller_type = objects.lookup(self)->get_name();
-  if (actual->nth(0)->get_type() != SELF_TYPE) {
+  if (expr->get_type() != SELF_TYPE) {
     caller_type = expr->get_type();
   }
 
   // add method to signature
-  Classes methodParams = methods.lookup(caller_type)->find(name)->second;
+  Classes methodFormals = methods.lookup(caller_type)->find(name)->second;
   // TODO: FIX THIS
   // if (methodParams = methods.lookup(caller_type).end() || methodParams->second != formalClasses) {
   //   classes->semant_error(errClass) << ": " << "Invalid method.\n";
@@ -641,12 +654,11 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
   //   return Object;
   // }
 
-  Classes methodFormals = methods.lookup(caller_type)->find(name)->second;
   // check if each parameter in dispatch call inherits declared parameter
-  for (size_t i = 0; i < formalClasses.size(); i++) {
+  for (int i = types->first(); types->more(i); i = types->next(i)) {
     // represents return type, do not check inheritance
     bool isInherit = false;
-    Class_ cur = classes->lookup(formalClasses[i])->get_class();
+    Class_ cur = types->nth(i);
     std::set<Class_> xSet;
     xSet.insert(cur);
 
@@ -664,9 +676,17 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
       return Object;
     }
   }
+  Symbol return_type = expr->get_type();
+  // what if dispatch has diff # of arguments than in method table? possibility of error
+  if (methods.lookup(caller_type)->find(name) == methods.lookup(caller_type)->end()) {
+    classes->semant_error(errClass) << ": " << "Function not found in caller.\n";
+  }
+  if (methods.lookup(return_type)->find(name)->second->nth(types->len())->get_name() != objects.lookup(self)->get_name()) { 
+    return_type = methods.lookup(return_type)->find(name)->second->nth(types->len())->get_name();
+  }
 
-  set_type(methods.lookup(caller_type)->find(name)->second->nth(formalClasses.size())->get_name());
-  return methods.lookup(caller_type)->find(name)->second->nth(formalClasses.size())->get_name();
+  set_type(return_type);
+  return return_type;
 }
 
 Symbol cond_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
