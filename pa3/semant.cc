@@ -182,8 +182,10 @@ bool is_inherited(ClassTable& classes, ObjectTable& objects, Class_ ancestor, Cl
 }
 
 Class_ lub(ClassTable* classes, Class_ x, Class_ y) {
-  // TODO: add the three other cases involving SELF_TYPE
   // least common ancestor in the inheritance tree
+  if (x->get_name() == SELF_TYPE && y->get_name() == SELF_TYPE) {
+    return x;
+  }
   std::set<Class_> xSet;
   xSet.insert(classes->lookup(Object)->get_class());
   // add x's inheritance tree to the set
