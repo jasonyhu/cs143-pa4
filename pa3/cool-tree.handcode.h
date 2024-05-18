@@ -62,7 +62,7 @@ class ClassTable;
   virtual Symbol get_name() = 0; \
   virtual Features get_features() = 0; \
   virtual void traverse(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, Class_ cur) = 0; \
-  virtual void dump_with_types(ostream&,int) = 0;
+  virtual void dump_with_types(ostream&,int) = 0; \
 
 #define class__EXTRAS				       \
   Symbol get_filename() { return filename; }	       \
@@ -70,15 +70,17 @@ class ClassTable;
   Symbol get_name() { return name; } \
   Features get_features() { return features; } \
   void traverse(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, Class_ cur); \
-  void dump_with_types(ostream&,int);
+  void dump_with_types(ostream&,int); \
 
 #define Feature_EXTRAS					\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; 
+  virtual void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0; \
+  virtual void method_traversal(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass) = 0;
 
 #define Feature_SHARED_EXTRAS			\
   void dump_with_types(ostream&,int); \
-  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); 
+  void traverse(ClassTable* classes, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass); \
+  void method_traversal(ClassTable* table, SymbolTable<Symbol, std::map<Symbol, Classes>>& methods, SymbolTable<Symbol, Class__class>& objects, Class_ errClass);
 
 #define Formal_EXTRAS					      \
   virtual void dump_with_types(ostream&,int) = 0; \
