@@ -382,11 +382,7 @@ void class__class::traverse(ClassTable* table, MethodTable& methods, Class_ cur)
 void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable& objects, Class_ errClass) {
   if (classes->lookup(return_type) == NULL && return_type != SELF_TYPE) {
     classes->semant_error(errClass) << ": " << "Return type " << return_type->get_string() << " does not exist.\n";
-  }
-  // TOOD: ONLY THROW THE ERROR WHEN THE METHOD IS NON-INHERITED
-  if ((methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) &&
-      (methods.lookup(errClass->get_name())->find(name) != methods.lookup(classes->lookup(errClass->get_name())->get_parent())->find(name))) {
-    classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
+    return_type = Object;
   }
 
   objects.enterscope();
@@ -395,13 +391,15 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   std::set<Symbol> identifiers;
 
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    if (classes->lookup(formals->nth(i)->get_type_decl()) == NULL) {
+    Symbol formal_type = formals->nth(i)->get_type_decl();
+    if (classes->lookup(formal_type) == NULL) {
       classes->semant_error(errClass) << ": " << "Formal parameter " << formals->nth(i)->get_type_decl() << " is an unrecognized class.\n";
+      formal_type = Object;
     }
     if (classesInMap->len() == 0) {
-      classesInMap = single_Classes(classes->lookup(formals->nth(i)->get_type_decl())->get_class());
+      classesInMap = single_Classes(classes->lookup(formal_type)->get_class());
     } else {
-      classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(formals->nth(i)->get_type_decl())->get_class()));
+      classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(formal_type)->get_class()));
     }
     if (identifiers.find(formals->nth(i)->get_name()) != identifiers.end()) {
       classes->semant_error(errClass) << ": " << "Duplicate identifier in formal parameter list .\n";
@@ -415,14 +413,18 @@ void method_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTab
   } else {
     classesInMap = append_Classes(classesInMap, single_Classes(classes->lookup(self)->get_class()));
   }
+    // TOOD: ONLY THROW THE ERROR WHEN THE METHOD IS NON-INHERITED
+  if ((methods.lookup(errClass->get_name())->find(name) != methods.lookup(errClass->get_name())->end()) &&
+      (classesInMap != methods.lookup(classes->lookup(errClass->get_name())->get_parent())->find(name)->second)) {
+    classes->semant_error(errClass) << "Method " << name->get_string() <<  " is already defined.\n";
+  } 
   // replaces existing method OR inserts a new one
   (*methods.lookup(objects.lookup(self)->get_name()))[name] = classesInMap;
   expr->traverse(classes, methods, objects, errClass);
   Symbol expr_type = expr->get_type();
-  if (return_type == SELF_TYPE) {
+  if (return_type == SELF_TYPE || expr_type == SELF_TYPE) {
     expr_type = objects.lookup(self)->get_name();
-  }
-  
+  }  
   if (!is_inherited(classes, objects, classes->lookup(return_type)->get_class(), classes->lookup(expr_type)->get_class())) {
     classes->semant_error(errClass) << ": " << "Method return type " << return_type << " is not a parent of expression type " << expr_type << ".\n";
   }
@@ -463,6 +465,7 @@ void attr_class::traverse(ClassTable* classes, MethodTable& methods, ObjectTable
   }
   if (name == self) {
     classes->semant_error(errClass) << "Attribute cannot be named 'self'.\n";
+    // TODO: find more graceful way to recover from these errors
     return;
   }
 
@@ -637,11 +640,16 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
     // }
     actual->nth(i)->traverse(classes, methods, objects, errClass);
     identifiers.insert(actual->nth(i)->get_type());
-    if (types->len() == 0) {
-      types = single_Classes(classes->lookup(actual->nth(i)->get_type())->get_class());
-    } else {
-      types = append_Classes(types, single_Classes(classes->lookup(actual->nth(i)->get_type())->get_class()));
+    Symbol to_insert = actual->nth(i)->get_type();
+    if (actual->nth(i)->get_type() == SELF_TYPE) {
+      to_insert = objects.lookup(self)->get_name();
     }
+    if (types->len() == 0) {
+      types = single_Classes(classes->lookup(to_insert)->get_class());
+    } else {
+      types = append_Classes(types, single_Classes(classes->lookup(to_insert)->get_class()));
+    }
+
     // if (identifiers.find(actual->nth(i)->get_name()) != identifiers.end()) {
     //   classes->semant_error(errClass) << ": " << "Duplicate identifier in formal parameter list .\n";
     // }
@@ -675,7 +683,7 @@ Symbol dispatch_class::traverse(ClassTable* classes, MethodTable& methods, Objec
     while (cur != classes->lookup(Object)->get_class()) {
       cur = classes->lookup(cur->get_parent())->get_class();
       xSet.insert(cur);
-      if (xSet.find(methodFormals->nth(i)) != xSet.end()) {
+      if (xSet.find(types->nth(i)) != xSet.end()) {
         isInherit = true;
       }
     }
@@ -733,17 +741,17 @@ Symbol typcase_class::traverse(ClassTable* classes, MethodTable& methods, Object
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
     objects.enterscope();
     cases->nth(i)->traverse(classes, methods, objects, errClass);
-    if (types.find(objects.lookup(cases->nth(i)->get_name())) != types.end()) {
+    if (types.find(objects.lookup(cases->nth(i)->get_type_decl())) != types.end()) {
       classes->semant_error(errClass) << ": " << "Variables do not have distinct types.\n";
       set_type(Object);
       return Object;
     } else {
-      types.insert(objects.lookup(cases->nth(i)->get_name()));
+      types.insert(objects.lookup(cases->nth(i)->get_type_decl()));
     }
     if (return_type == NULL) {
-      return_type = classes->lookup(cases->nth(i)->get_name())->get_class()->get_name();
+      return_type = classes->lookup(cases->nth(i)->get_type_decl())->get_class()->get_name();
     } else {
-      return_type = lub(classes, objects, classes->lookup(return_type)->get_class(), objects.lookup(cases->nth(i)->get_name()))->get_name();
+      return_type = lub(classes, objects, classes->lookup(return_type)->get_class(), objects.lookup(cases->nth(i)->get_type_decl()))->get_name();
     }
     objects.exitscope();
   }
@@ -1000,10 +1008,15 @@ void program_class::semant() {
   (*objMethods)[type_name] = single_Classes(classtable->lookup(Str)->get_class());
   (*objMethods)[::copy] = single_Classes(classtable->lookup(Object)->get_class());
 
+  (*ioMethods)[cool_abort] = single_Classes(classtable->lookup(Object)->get_class());
+  (*ioMethods)[type_name] = single_Classes(classtable->lookup(Str)->get_class());
+  (*ioMethods)[::copy] = single_Classes(classtable->lookup(Object)->get_class());
   (*ioMethods)[out_string] = append_Classes(single_Classes(classtable->lookup(Str)->get_class()), single_Classes(classtable->lookup(IO)->get_class()));
   (*ioMethods)[out_int] = append_Classes(single_Classes(classtable->lookup(Int)->get_class()), single_Classes(classtable->lookup(Str)->get_class()));
   (*ioMethods)[in_string] = single_Classes(classtable->lookup(Str)->get_class());
   (*ioMethods)[in_int] = single_Classes(classtable->lookup(Int)->get_class());
+
+  // TODO: also add attributes and values for strings/ints/other classes
 
   methods.addid(IO, ioMethods);
   methods.addid(Object, objMethods);
@@ -1013,7 +1026,7 @@ void program_class::semant() {
   // type checking : assign types to each node of the AST
   // figure out the type of the expression/feature in the AST
   // 
-
+  // TODO: we need to have multiple passes to add methods/attributes to the table before use
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     classes->nth(i)->traverse(classtable, methods, classes->nth(i));
     if (classes->nth(i)->get_name() == Main) {
