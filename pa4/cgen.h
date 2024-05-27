@@ -23,7 +23,8 @@ private:
   std::ostream& str;
   std::list<Symbol> classes;
   SymbolTable<Symbol,int> class_to_tag_table;
-  int tagCounter = 0;
+  int* tagCounter = (int *)malloc(sizeof(int));
+
 
   // The following methods emit code for constants and global declarations.
   void code_global_data();
