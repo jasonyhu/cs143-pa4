@@ -403,7 +403,7 @@ void StringEntry::code_def(ostream& s, int stringclasstag)
      << WORD;
 
   /***** Add dispatch information for class String ******/
-  s << WORD << "str_dispTab" << std::endl;                                              // dispatch table
+  s << "String_dispTab" << std::endl;                                              // dispatch table
   s << WORD;  lensym->code_ref(s);  s << std::endl;            // string length
   emit_string_constant(s,str);                                // ascii string
   s << ALIGN;                                                 // align to word
@@ -446,7 +446,7 @@ void IntEntry::code_def(ostream &s, int intclasstag)
 
   /***** Add dispatch information for class Int ******/
 
-  s << WORD << "Int_dispTab" << std::endl;                                          // dispatch table
+  s << "Int_dispTab" << std::endl;                                          // dispatch table
   s << WORD << str << std::endl;                           // integer value
 }
 
@@ -489,7 +489,7 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
 
   /***** Add dispatch information for class Bool ******/
 
-  s << WORD << "Bool_dispTab" << std::endl;                                            // dispatch table
+  s << "Bool_dispTab" << std::endl;                                            // dispatch table
   s << WORD << val << std::endl;                             // value (0 or 1)
 }
 
@@ -629,6 +629,7 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
 
   enterscope();
   if (cgen_debug) std::cerr << "Building CgenClassTable" << std::endl;
+  *tagCounter = 0;
   install_basic_classes();
   install_classes(classes);
   build_inheritance_tree();
@@ -923,7 +924,7 @@ void CgenClassTable::code()
     // prototype objects
     for (Symbol class_ : classes) {
       str << class_->get_string() << "_protObj" << LABEL << std::endl;
-      int classTag = *class_to_tag_table.lookup(idtable.lookup_string(class_->get_string()));
+      int classTag = *class_to_tag_table.lookup(class_);
       str << WORD << classTag << std::endl;
       // object size
       int objectSize;
