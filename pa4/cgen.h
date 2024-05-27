@@ -21,7 +21,9 @@ class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
   std::list<CgenNodeP> nds;
   std::ostream& str;
+  std::list<Symbol> classes;
   SymbolTable<Symbol,int> class_to_tag_table;
+  int tagCounter = 0;
 
   // The following methods emit code for constants and global declarations.
   void code_global_data();
@@ -61,6 +63,8 @@ public:
   void set_parentnd(CgenNodeP p);
   CgenNodeP get_parentnd();
   int basic() { return (basic_status == Basic); }
+  void disp_traversal(ostream& str);
+  void attr_traversal(ostream& str);
 };
 
 class BoolConst {
