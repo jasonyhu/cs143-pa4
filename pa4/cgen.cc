@@ -131,25 +131,6 @@ BoolConst truebool(TRUE);
 void program_class::cgen(ostream &os) {
    initialize_constants();
    CgenClassTable *codegen_classtable = new CgenClassTable(classes,os);
-
-   // set up the recursive code generation
-  /* In your code() method, recurse over each class.
-
-  For each class, emit code to generate the init function. (Also, you should generate the methods, but for simplicity we'll focus on the attributes.)
-
-  The init function generates code to initialize each attribute using its initializer.
-
-  If the attribute's initializer is an integer constant, it will call int_const_class::code.
-  */
-  // TODO: add more passes depending on what we need
-  for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
-    Features features = classes->nth(i)->get_features();
-    for (int j = features->first(); features->more(j); j = features->next(j)) {
-      // TODO: what does os mean in this context, am i using it wrong
-      // TODO: do i even need traverse? "emit code to generate the init function"
-      features->nth(j)->traverse(os);
-    }
-  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -422,7 +403,7 @@ void StringEntry::code_def(ostream& s, int stringclasstag)
      << WORD;
 
   /***** Add dispatch information for class String ******/
-  s << std::endl;                                              // dispatch table
+  s << WORD << "str_dispTab" << std::endl;                                              // dispatch table
   s << WORD;  lensym->code_ref(s);  s << std::endl;            // string length
   emit_string_constant(s,str);                                // ascii string
   s << ALIGN;                                                 // align to word
@@ -465,7 +446,7 @@ void IntEntry::code_def(ostream &s, int intclasstag)
 
   /***** Add dispatch information for class Int ******/
 
-  s << std::endl;                                          // dispatch table
+  s << WORD << "Int_dispTab" << std::endl;                                          // dispatch table
   s << WORD << str << std::endl;                           // integer value
 }
 
@@ -508,7 +489,7 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
 
   /***** Add dispatch information for class Bool ******/
 
-  s << std::endl;                                            // dispatch table
+  s << WORD << "Bool_dispTab" << std::endl;                                            // dispatch table
   s << WORD << val << std::endl;                             // value (0 or 1)
 }
 
@@ -545,41 +526,7 @@ void CgenClassTable::code_global_data()
   str << GLOBAL << INTTAG << std::endl;
   str << GLOBAL << BOOLTAG << std::endl;
   str << GLOBAL << STRINGTAG << std::endl;
-  /* TODO:
-	.globl	class_parentTab
-	.globl	class_attrTabTab
-	.globl	Object_protObj
-	.globl	Object_init
-	.globl	Object_attrTab
-	.globl	Main_protObj
-	.globl	Main_init
-	.globl	Main_attrTab
-	.globl	String_protObj
-	.globl	String_init
-	.globl	String_attrTab
-	.globl	Bool_protObj
-	.globl	Bool_init
-	.globl	Bool_attrTab
-	.globl	Int_protObj
-	.globl	Int_init
-	.globl	Int_attrTab
-	.globl	IO_protObj
-	.globl	IO_init
-	.globl	IO_attrTab
-*/
-  // str << GLOBAL << CLASSOBJTAB << std::endl;
-  // str << GLOBAL; emit_protobj_ref(object,str);  str << std::endl;
-  // str << GLOBAL; emit_protobj_ref(boolc,str);  str << std::endl;
-  // str << GLOBAL; emit_protobj_ref(io,str);  str << std::endl;
-
-
-  /*
-  For each table, you should insert a label for the table (which matches the label expected by the runtime.) A label is a location 
-  in the program code. In other parts of the program, you can use the label as you would a constant value, and the assembler/linker 
-  will insert the actual address that code was loaded into memory. The runtime can also use these labels if you declare them to be .globl 
-  (see code_global_data for some example.)
-
-*/
+  str << GLOBAL << CLASSOBJTAB << std::endl;
 
   //
   // We also need to know the tag of the Int, String, and Bool classes
@@ -806,7 +753,6 @@ void CgenClassTable::install_basic_classes() {
 				   no_expr()))),
 	     filename),
         Basic,this));
-
 }
 
 // CgenClassTable::install_class
@@ -824,9 +770,11 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   if (probe(name)) {
     return;
   }
-
   // The class name is legal, so add it to the list of classes
   // and the symbol table.
+  classes.push_back(name);
+  class_to_tag_table.addid(name, &tagCounter);
+  tagCounter++;
   nds.push_front(nd);
   addid(name, nd);
 }
@@ -873,12 +821,62 @@ CgenNodeP CgenNode::get_parentnd()
   return parentnd;
 }
 
+void method_class::disPrint(Symbol parent, ostream& str) {
+  str << WORD << parent->get_string() << "." << name->get_string() << std::endl;
+}
+
+void attr_class::disPrint(Symbol parent, ostream& str) {
+  return;
+}
+
+void method_class::attrPrint(Symbol parent, ostream& str) {
+  return;
+}
+
+void attr_class::attrPrint(Symbol parent, ostream& str) {
+  // TODO: what is the difference between Int and void?
+  if (name == Int) {
+    str << WORD << 0 << std::endl;
+  } else if (name == Bool) {
+    str << WORD << "false" << std::endl;
+  } else if (name == Str) {
+    str << WORD << "" << std::endl;
+  } else {
+    str << WORD << 0 << std::endl;
+  }
+}
+
+void CgenNode::disp_traversal(ostream& str) {
+  if (get_parentnd() != NULL) {
+    get_parentnd()->disp_traversal(str);
+  }
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    // TODO: check if feature is method only
+    features->nth(i)->disPrint(name, str);
+  }
+}
+
+void CgenNode::attr_traversal(ostream& str) {
+  if (get_parentnd() != NULL) {
+    get_parentnd()->attr_traversal(str);
+  }
+  if (name == Int) {
+    str << WORD << 0 << std::endl;
+  } else if (name == Bool) {
+    str << WORD << 0 << std::endl;
+  // TODO: what do i even do with string
+  } else if (name == Str) {
+    str << WORD << 0 << std::endl;
+    str << WORD << "" << std::endl;
+  } else {
+    for (int i = features->first(); features->more(i); i = features->next(i)) {
+      features->nth(i)->attrPrint(name, str);
+    }
+  }
+}
 
 void CgenClassTable::code()
 {
-
-
-
     if (cgen_debug) std::cerr << "coding global data" << std::endl;
     code_global_data();
 
@@ -894,6 +892,48 @@ void CgenClassTable::code()
     //                   - dispatch tables
     //
 
+    /*
+    For each table, you should insert a label for the table (which matches the label expected by the runtime.) A label is a location 
+    in the program code. In other parts of the program, you can use the label as you would a constant value, and the assembler/linker 
+    will insert the actual address that code was loaded into memory. The runtime can also use these labels if you declare them to be .globl 
+    (see code_global_data for some example.)
+    */
+   // TODO: incomplete
+
+   // class_nameTab
+    str << CLASSNAMETAB << LABEL << std::endl;
+    for (Symbol class_ : classes) {
+      str << WORD << class_->get_string() << std::endl;
+    }
+
+    // class_objTab
+    str << CLASSOBJTAB << LABEL << std::endl;
+    for (Symbol class_ : classes) {
+      str << WORD << class_->get_string() << "_protObj" << std::endl;
+      str << WORD << class_->get_string() << "_init" << std::endl;
+    }
+
+    // dispatch tables
+    for (Symbol class_ : classes) {
+      str << class_->get_string() << "_dispTab" << LABEL << std::endl;
+      // recurse to the parent, list all of its classes
+      lookup(class_)->disp_traversal(str);
+    }
+
+    // prototype objects
+    for (Symbol class_ : classes) {
+      str << class_->get_string() << "_protObj" << LABEL << std::endl;
+      int classTag = *class_to_tag_table.lookup(idtable.lookup_string(class_->get_string()));
+      str << WORD << classTag << std::endl;
+      // object size
+      int objectSize;
+      // dispatch ptr
+      str << WORD << class_->get_string() << "_dispTab" << std::endl;
+      // attributes
+      lookup(class_)->attr_traversal(str);
+      // garbage collector tag
+      str << WORD << -1 << std::endl;
+    }
 
     if (cgen_debug) std::cerr << "coding global text" << std::endl;
     code_global_text();
@@ -902,6 +942,26 @@ void CgenClassTable::code()
     //                   - object initializer
     //                   - the class methods
     //                   - etc...
+
+
+     // set up the recursive code generation
+  /* In your code() method, recurse over each class.
+
+  For each class, emit code to generate the init function. (Also, you should generate the methods, but for simplicity we'll focus on the attributes.)
+
+  The init function generates code to initialize each attribute using its initializer.
+
+  If the attribute's initializer is an integer constant, it will call int_const_class::code.
+  */
+  // TODO: add more passes depending on what we need
+  for (Symbol i : classes) {
+    Features features = lookup(i)->get_features();
+    for (int j = features->first(); features->more(j); j = features->next(j)) {
+      // TODO: what does os mean in this context, am i using it wrong
+      // TODO: do i even need traverse? "emit code to generate the init function"
+      features->nth(j)->traverse(str);
+    }
+  }
 
 }
 

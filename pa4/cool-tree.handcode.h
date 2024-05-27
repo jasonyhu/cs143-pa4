@@ -69,11 +69,15 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ostream&) = 0;
+  virtual void traverse(ostream&) = 0; \
+  virtual void disPrint(Symbol name, ostream& str) = 0; \
+  virtual void attrPrint(Symbol name, ostream& str) = 0;
 
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
-  void traverse(ostream&);
+  void traverse(ostream&); \
+  void disPrint(Symbol name, ostream& str); \
+  void attrPrint(Symbol name, ostream& str);
 
 
 #define Formal_EXTRAS					\
