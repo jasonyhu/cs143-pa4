@@ -629,7 +629,6 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
 
   enterscope();
   if (cgen_debug) std::cerr << "Building CgenClassTable" << std::endl;
-  *tagCounter = 0;
   install_basic_classes();
   install_classes(classes);
   build_inheritance_tree();
@@ -774,8 +773,8 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   // The class name is legal, so add it to the list of classes
   // and the symbol table.
   classes.push_back(name);
-  class_to_tag_table.addid(name, new int(tagCounter));
-  tagCounter++;
+  class_to_tag_table.addid(name, new int(tag_counter));
+  tag_counter++;
   nds.push_front(nd);
   addid(name, nd);
 }
