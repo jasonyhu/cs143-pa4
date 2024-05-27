@@ -773,7 +773,7 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   // The class name is legal, so add it to the list of classes
   // and the symbol table.
   classes.push_back(name);
-  class_to_tag_table.addid(name, &tagCounter);
+  class_to_tag_table.addid(name, new int(tagCounter));
   tagCounter++;
   nds.push_front(nd);
   addid(name, nd);

@@ -12,11 +12,11 @@
 	.globl	_string_tag
 	.globl	class_objTab
 _int_tag:
-	.word	6
+	.word	2
 _bool_tag:
-	.word	6
+	.word	3
 _string_tag:
-	.word	6
+	.word	4
 	.globl	_MemMgr_INITIALIZER
 _MemMgr_INITIALIZER:
 	.word	_NoGC_Init
@@ -28,7 +28,7 @@ _MemMgr_TEST:
 	.word	0
 	.word	-1
 str_const2:
-	.word	6
+	.word	4
 	.word	5
 	.word		.word	str_dispTab
 	.word	int_const1
@@ -36,7 +36,7 @@ str_const2:
 	.align	2
 	.word	-1
 str_const1:
-	.word	6
+	.word	4
 	.word	8
 	.word		.word	str_dispTab
 	.word	int_const2
@@ -45,7 +45,7 @@ str_const1:
 	.align	2
 	.word	-1
 str_const0:
-	.word	6
+	.word	4
 	.word	7
 	.word		.word	str_dispTab
 	.word	int_const3
@@ -54,37 +54,37 @@ str_const0:
 	.align	2
 	.word	-1
 int_const3:
-	.word	6
+	.word	2
 	.word	4
 	.word		.word	Int_dispTab
 	.word	10
 	.word	-1
 int_const2:
-	.word	6
+	.word	2
 	.word	4
 	.word		.word	Int_dispTab
 	.word	13
 	.word	-1
 int_const1:
-	.word	6
+	.word	2
 	.word	4
 	.word		.word	Int_dispTab
 	.word	0
 	.word	-1
 int_const0:
-	.word	6
+	.word	2
 	.word	4
 	.word		.word	Int_dispTab
 	.word	42
 	.word	-1
 bool_const0:
-	.word	6
+	.word	3
 	.word	4
 	.word		.word	Bool_dispTab
 	.word	0
 	.word	-1
 bool_const1:
-	.word	6
+	.word	3
 	.word	4
 	.word		.word	Bool_dispTab
 	.word	1
@@ -150,36 +150,36 @@ Main_dispTab:
 	.word	Main.main
 Object_protObj:
 
-	.word	6
+	.word	0
 	.word	Object_dispTab
 	.word	-1
 IO_protObj:
 
-	.word	6
+	.word	1
 	.word	IO_dispTab
 	.word	-1
 Int_protObj:
 
-	.word	6
+	.word	2
 	.word	Int_dispTab
 	.word	0
 	.word	-1
 Bool_protObj:
 
-	.word	6
+	.word	3
 	.word	Bool_dispTab
 	.word	0
 	.word	-1
 String_protObj:
 
-	.word	6
+	.word	4
 	.word	String_dispTab
 	.word	0
 	.word	
 	.word	-1
 Main_protObj:
 
-	.word	6
+	.word	5
 	.word	Main_dispTab
 	.word	-1
 	.globl	heap_start
