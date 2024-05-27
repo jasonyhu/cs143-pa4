@@ -999,8 +999,6 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-// i added class, method, and attr. not sure if we need them but this is for the sake of recursion
-
 void method_class::traverse(ostream &s) {
   // TODO: handle formals?
   expr->code(s);
@@ -1019,17 +1017,17 @@ void assign_class::code(ostream &s) {
 }
 
 void static_dispatch_class::code(ostream &s) {
-  expr->code(s);
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s);
   }
+  expr->code(s);
 }
 
 void dispatch_class::code(ostream &s) {
-  expr->code(s);
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s);
   }
+  expr->code(s);
 }
 
 void cond_class::code(ostream &s) {
