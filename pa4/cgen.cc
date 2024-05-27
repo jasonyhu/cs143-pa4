@@ -147,6 +147,7 @@ void program_class::cgen(ostream &os) {
     Features features = classes->nth(i)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
       // TODO: what does os mean in this context, am i using it wrong
+      // TODO: do i even need traverse? "emit code to generate the init function"
       features->nth(j)->traverse(os);
     }
   }
@@ -527,6 +528,10 @@ void CgenClassTable::code_global_data()
   Symbol string  = idtable.lookup_string(STRINGNAME);
   Symbol integer = idtable.lookup_string(INTNAME);
   Symbol boolc   = idtable.lookup_string(BOOLNAME);
+  // TODO: additional symobls
+  // Symbol class_   = idtable.lookup_string(BOOLNAME);
+  // Symbol class_   = idtable.lookup_string(BOOLNAME);
+  // Symbol class_   = idtable.lookup_string(BOOLNAME);
 
   str << "\t.data\n" << ALIGN;
   //
@@ -541,7 +546,41 @@ void CgenClassTable::code_global_data()
   str << GLOBAL << INTTAG << std::endl;
   str << GLOBAL << BOOLTAG << std::endl;
   str << GLOBAL << STRINGTAG << std::endl;
+  /* TODO:
+	.globl	class_parentTab
+	.globl	class_attrTabTab
+	.globl	Object_protObj
+	.globl	Object_init
+	.globl	Object_attrTab
+	.globl	Main_protObj
+	.globl	Main_init
+	.globl	Main_attrTab
+	.globl	String_protObj
+	.globl	String_init
+	.globl	String_attrTab
+	.globl	Bool_protObj
+	.globl	Bool_init
+	.globl	Bool_attrTab
+	.globl	Int_protObj
+	.globl	Int_init
+	.globl	Int_attrTab
+	.globl	IO_protObj
+	.globl	IO_init
+	.globl	IO_attrTab
+*/
+  // str << GLOBAL << CLASSOBJTAB << std::endl;
+  // str << GLOBAL; emit_protobj_ref(object,str);  str << std::endl;
+  // str << GLOBAL; emit_protobj_ref(boolc,str);  str << std::endl;
+  // str << GLOBAL; emit_protobj_ref(io,str);  str << std::endl;
 
+
+  /*
+  For each table, you should insert a label for the table (which matches the label expected by the runtime.) A label is a location 
+  in the program code. In other parts of the program, you can use the label as you would a constant value, and the assembler/linker 
+  will insert the actual address that code was loaded into memory. The runtime can also use these labels if you declare them to be .globl 
+  (see code_global_data for some example.)
+
+*/
 
   //
   // We also need to know the tag of the Int, String, and Bool classes
@@ -1034,5 +1073,6 @@ void no_expr_class::code(ostream &s) {
 }
 
 void object_class::code(ostream &s) {
+
 }
 
