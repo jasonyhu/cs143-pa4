@@ -30,7 +30,7 @@ _MemMgr_TEST:
 str_const2:
 	.word	4
 	.word	5
-	.word		.word	str_dispTab
+	.word	String_dispTab
 	.word	int_const1
 	.byte	0	
 	.align	2
@@ -38,7 +38,7 @@ str_const2:
 str_const1:
 	.word	4
 	.word	8
-	.word		.word	str_dispTab
+	.word	String_dispTab
 	.word	int_const2
 	.ascii	"<basic class>"
 	.byte	0	
@@ -47,7 +47,7 @@ str_const1:
 str_const0:
 	.word	4
 	.word	7
-	.word		.word	str_dispTab
+	.word	String_dispTab
 	.word	int_const3
 	.ascii	"example.cl"
 	.byte	0	
@@ -56,37 +56,37 @@ str_const0:
 int_const3:
 	.word	2
 	.word	4
-	.word		.word	Int_dispTab
+	.word	Int_dispTab
 	.word	10
 	.word	-1
 int_const2:
 	.word	2
 	.word	4
-	.word		.word	Int_dispTab
+	.word	Int_dispTab
 	.word	13
 	.word	-1
 int_const1:
 	.word	2
 	.word	4
-	.word		.word	Int_dispTab
+	.word	Int_dispTab
 	.word	0
 	.word	-1
 int_const0:
 	.word	2
 	.word	4
-	.word		.word	Int_dispTab
+	.word	Int_dispTab
 	.word	42
 	.word	-1
 bool_const0:
 	.word	3
 	.word	4
-	.word		.word	Bool_dispTab
+	.word	Bool_dispTab
 	.word	0
 	.word	-1
 bool_const1:
 	.word	3
 	.word	4
-	.word		.word	Bool_dispTab
+	.word	Bool_dispTab
 	.word	1
 class_nameTab:
 
