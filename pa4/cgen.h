@@ -19,9 +19,8 @@ typedef CgenNode *CgenNodeP;
 
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
-  std::list<CgenNodeP> nds;
+  std::list<CgenNodeP> nds;  // nodes
   std::ostream& str;
-  std::list<Symbol> classes;
   SymbolTable<Symbol,int> class_to_tag_table;
   int tag_counter = 0;
 
@@ -32,9 +31,11 @@ private:
   void code_bools();
   void code_select_gc();
   void code_constants();
+  void code_class_name_table();
+  void code_class_obj_table();
 
   // The following creates an inheritance graph from a list of classes. The
-  // graph is implemented as  a tree of `CgenNode', and class names are placed
+  // graph is implemented as a tree of `CgenNode', and class names are placed
   // in the base class symbol table.
   void install_basic_classes();
   void install_class(CgenNodeP nd);

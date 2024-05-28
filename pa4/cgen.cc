@@ -403,7 +403,7 @@ void StringEntry::code_def(ostream& s, int stringclasstag)
      << WORD;
 
   /***** Add dispatch information for class String ******/
-  s << "String_dispTab" << std::endl;                                              // dispatch table
+  s << Str << DISPTAB_SUFFIX << std::endl;                                              // dispatch table
   s << WORD;  lensym->code_ref(s);  s << std::endl;            // string length
   emit_string_constant(s,str);                                // ascii string
   s << ALIGN;                                                 // align to word
@@ -446,7 +446,7 @@ void IntEntry::code_def(ostream &s, int intclasstag)
 
   /***** Add dispatch information for class Int ******/
 
-  s << "Int_dispTab" << std::endl;                                          // dispatch table
+  s << Int << DISPTAB_SUFFIX << std::endl;                                          // dispatch table
   s << WORD << str << std::endl;                           // integer value
 }
 
@@ -489,7 +489,7 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
 
   /***** Add dispatch information for class Bool ******/
 
-  s << "Bool_dispTab" << std::endl;                                            // dispatch table
+  s << Bool << DISPTAB_SUFFIX << std::endl;                                            // dispatch table
   s << WORD << val << std::endl;                             // value (0 or 1)
 }
 
@@ -620,6 +620,21 @@ void CgenClassTable::code_constants()
   stringtable.code_string_table(str,stringclasstag);
   inttable.code_string_table(str,intclasstag);
   code_bools();
+}
+
+void CgenClassTable::code_class_name_table() {
+  str << CLASSNAMETAB << LABEL;
+  for (CgenNodeP nd : nds) {
+    Symbol class_ = nd->get_name();
+    StringEntryP str_entry = stringtable.lookup_string(class_->get_string());
+    str << WORD;
+    str_entry->code_ref(str);
+    str << std::endl;
+  }
+}
+
+void CgenClassTable:: code_class_obj_table() {
+
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
@@ -772,7 +787,6 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   }
   // The class name is legal, so add it to the list of classes
   // and the symbol table.
-  classes.push_back(name);
   class_to_tag_table.addid(name, new int(tag_counter));
   tag_counter++;
   nds.push_front(nd);
@@ -900,28 +914,30 @@ void CgenClassTable::code()
     */
    // TODO: incomplete
 
-   // class_nameTab
-    str << CLASSNAMETAB << LABEL << std::endl;
-    for (Symbol class_ : classes) {
-      str << WORD << class_->get_string() << std::endl;
-    }
+    if (cgen_debug) std::cerr << "coding class name table" << std::endl;
+    code_class_name_table();
 
     // class_objTab
-    str << CLASSOBJTAB << LABEL << std::endl;
-    for (Symbol class_ : classes) {
-      str << WORD << class_->get_string() << "_protObj" << std::endl;
+    if (cgen_debug) std::cerr << "coding class object table" << std::endl;
+    code_class_object_table();
+    str << CLASSOBJTAB << LABEL;
+    for (CgenNodeP nd : nds) {
+      Symbol class_ = nd->get_name();
+      str << WORD << class_->get_string() << PROTOBJ_SUFFIX << std::endl;
       str << WORD << class_->get_string() << "_init" << std::endl;
     }
 
     // dispatch tables
-    for (Symbol class_ : classes) {
+    for (CgenNodeP nd : nds) {
+      Symbol class_ = nd->get_name();
       str << class_->get_string() << "_dispTab" << LABEL << std::endl;
       // recurse to the parent, list all of its classes
       lookup(class_)->disp_traversal(str);
     }
 
     // prototype objects
-    for (Symbol class_ : classes) {
+    for (CgenNodeP nd : nds) {
+      Symbol class_ = nd->get_name();
       str << class_->get_string() << "_protObj" << LABEL << std::endl;
       int classTag = *class_to_tag_table.lookup(class_);
       str << WORD << classTag << std::endl;
@@ -954,8 +970,9 @@ void CgenClassTable::code()
   If the attribute's initializer is an integer constant, it will call int_const_class::code.
   */
   // TODO: add more passes depending on what we need
-  for (Symbol i : classes) {
-    Features features = lookup(i)->get_features();
+  for (CgenNodeP nd : nds) {
+    Symbol class_ = nd->get_name();
+    Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
       // TODO: what does os mean in this context, am i using it wrong
       // TODO: do i even need traverse? "emit code to generate the init function"
@@ -983,7 +1000,7 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
    parentnd(NULL),
    basic_status(bstatus)
 {
-  // stringtable.add_string(name->get_string());          // Add class name to string table
+  stringtable.add_string(name->get_string());          // Add class name to string table
 }
 
 
@@ -1127,6 +1144,7 @@ void isvoid_class::code(ostream &s) {
 }
 
 void no_expr_class::code(ostream &s) {
+  emit_move(ACC, ZERO, s);
 }
 
 void object_class::code(ostream &s) {
