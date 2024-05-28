@@ -927,22 +927,24 @@ void attr_class::disPrint(Symbol parent, ostream& str) {
   return;
 }
 
-// void method_class::attrPrint(Symbol parent, ostream& str) {
-//   return;
-// }
+// unused
+void method_class::attrPrint(Symbol parent, ostream& str) {
+  return;
+}
 
-// void attr_class::attrPrint(Symbol parent, ostream& str) {
-//   // TODO: what is the difference between Int and void?
-//   if (name == Int) {
-//     str << WORD << 0 << std::endl;
-//   } else if (name == Bool) {
-//     str << WORD << "false" << std::endl;
-//   } else if (name == Str) {
-//     str << WORD << "" << std::endl;
-//   } else {
-//     str << WORD << 0 << std::endl;
-//   }
-// }
+// unused
+void attr_class::attrPrint(Symbol parent, ostream& str) {
+  // TODO: what is the difference between Int and void?
+  if (name == Int) {
+    str << WORD << 0 << std::endl;
+  } else if (name == Bool) {
+    str << WORD << "false" << std::endl;
+  } else if (name == Str) {
+    str << WORD << "" << std::endl;
+  } else {
+    str << WORD << 0 << std::endl;
+  }
+}
 
 void CgenNode::disp_traversal(ostream& str) {
   if (get_parentnd() != NULL) {
@@ -1202,6 +1204,7 @@ void bool_const_class::code(ostream& s)
 }
 
 void new__class::code(ostream &s) {
+
 }
 
 void isvoid_class::code(ostream &s) {

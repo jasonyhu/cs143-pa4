@@ -85,3 +85,8 @@ class BoolConst {
   void code_ref(std::ostream&) const;
 };
 
+class Environment {
+  // TODO: expand environment class, pass in to all ::code funcs
+  public:
+    SymbolTable<Symbol, int> env;
+};
