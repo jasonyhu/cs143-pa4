@@ -71,7 +71,7 @@ public:
   CgenNodeP get_parentnd();
   int basic() { return (basic_status == Basic); }
   void disp_traversal(ostream& str);
-  void attr_traversal(ostream& str);
+  // void attr_traversal(ostream& str);
 
   std::vector<attr_class*> get_all_attrs();
 };

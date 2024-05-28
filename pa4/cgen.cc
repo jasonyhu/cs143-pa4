@@ -705,13 +705,13 @@ void CgenClassTable::code_prot_objs() {
           str << WORD;
           inttable.lookup_string("0")->code_ref(str);
           str << endl;
-        } else if (type == Bool) {
+        } else if (type == Str) {
           str << WORD;
-          falsebool.code_ref(str);
+          stringtable.lookup_string("")->code_ref(str);
           str << endl;
         } else if (type == Bool) {
           str << WORD;
-          stringtable.lookup_string("")->code_ref(str);
+          falsebool.code_ref(str);
           str << endl;
         } else {
           str << WORD << "0" << endl;
@@ -927,22 +927,22 @@ void attr_class::disPrint(Symbol parent, ostream& str) {
   return;
 }
 
-void method_class::attrPrint(Symbol parent, ostream& str) {
-  return;
-}
+// void method_class::attrPrint(Symbol parent, ostream& str) {
+//   return;
+// }
 
-void attr_class::attrPrint(Symbol parent, ostream& str) {
-  // TODO: what is the difference between Int and void?
-  if (name == Int) {
-    str << WORD << 0 << std::endl;
-  } else if (name == Bool) {
-    str << WORD << "false" << std::endl;
-  } else if (name == Str) {
-    str << WORD << "" << std::endl;
-  } else {
-    str << WORD << 0 << std::endl;
-  }
-}
+// void attr_class::attrPrint(Symbol parent, ostream& str) {
+//   // TODO: what is the difference between Int and void?
+//   if (name == Int) {
+//     str << WORD << 0 << std::endl;
+//   } else if (name == Bool) {
+//     str << WORD << "false" << std::endl;
+//   } else if (name == Str) {
+//     str << WORD << "" << std::endl;
+//   } else {
+//     str << WORD << 0 << std::endl;
+//   }
+// }
 
 void CgenNode::disp_traversal(ostream& str) {
   if (get_parentnd() != NULL) {
@@ -956,24 +956,24 @@ void CgenNode::disp_traversal(ostream& str) {
   }
 }
 
-void CgenNode::attr_traversal(ostream& str) {
-  if (get_parentnd() != NULL) {
-    get_parentnd()->attr_traversal(str);
-  }
-  if (name == Int) {
-    str << WORD << 0 << std::endl;
-  } else if (name == Bool) {
-    str << WORD << 0 << std::endl;
-  // TODO: what do i even do with string
-  } else if (name == Str) {
-    str << WORD << 0 << std::endl;
-    str << WORD << "" << std::endl;
-  } else {
-    for (int i = features->first(); features->more(i); i = features->next(i)) {
-      features->nth(i)->attrPrint(name, str);
-    }
-  }
-}
+// void CgenNode::attr_traversal(ostream& str) {
+//   if (get_parentnd() != NULL) {
+//     get_parentnd()->attr_traversal(str);
+//   }
+//   if (name == Int) {
+//     str << WORD << 0 << std::endl;
+//   } else if (name == Bool) {
+//     str << WORD << 0 << std::endl;
+//   // TODO: what do i even do with string
+//   } else if (name == Str) {
+//     str << WORD << 0 << std::endl;
+//     str << WORD << "" << std::endl;
+//   } else {
+//     for (int i = features->first(); features->more(i); i = features->next(i)) {
+//       features->nth(i)->attrPrint(name, str);
+//     }
+//   }
+// }
 
 void CgenClassTable::code()
 {
