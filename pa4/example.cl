@@ -4,6 +4,6 @@
  *)
 
 class Main {
-  main():Int { 42 };
+  main():Int { 42 + 5 };
 };
 

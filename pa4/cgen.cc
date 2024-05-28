@@ -633,8 +633,92 @@ void CgenClassTable::code_class_name_table() {
   }
 }
 
-void CgenClassTable:: code_class_obj_table() {
+void CgenClassTable::code_class_obj_table() {
+  str << CLASSOBJTAB << LABEL;
+  for (CgenNodeP nd : nds) {
+    Symbol class_ = nd->get_name();
+    str << WORD << class_->get_string() << PROTOBJ_SUFFIX << std::endl;
+    str << WORD << class_->get_string() << "_init" << std::endl;
+  }
+}
 
+void CgenClassTable::code_disp_tables() {
+  for (CgenNodeP nd : nds) {
+      Symbol class_ = nd->get_name();
+      emit_disptable_ref(class_, str);
+      str << LABEL;
+      // recurse to the parent, list all of its classes
+      lookup(class_)->disp_traversal(str);
+  }
+}
+
+std::vector<attr_class*> CgenNode::get_all_attrs() {
+  if (all_attrs.empty()) {
+    std::vector<CgenNode*> parents;
+    CgenNode* cn = this;
+    while (cn->name != No_class) {
+      parents.push_back(cn);
+      cn = cn->get_parentnd();
+    }
+    std::reverse(parents.begin(), parents.end());
+    for (CgenNode* nd : parents) {
+      Features parent_features = nd->features;
+      for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
+        Feature f = parent_features->nth(j);
+        if (!f->is_method()) {
+          all_attrs.push_back((attr_class*)f);
+        }
+      }
+    }
+  }
+  return all_attrs;
+}
+
+void CgenClassTable::code_prot_objs() {
+  for (CgenNodeP nd : nds) {
+    std::vector<attr_class*> attribs = nd->get_all_attrs();
+    // garbage collector tag
+    str << WORD << -1 << std::endl;
+    Symbol class_ = nd->get_name();
+    emit_protobj_ref(class_, str);
+    str << LABEL;
+    int classTag = *class_to_tag_table.lookup(class_);
+    str << WORD << classTag << std::endl;
+    // object size
+    str << WORD << (DEFAULT_OBJFIELDS + attribs.size()) << std::endl;
+    // dispatch ptr
+    str << WORD << class_ << DISPTAB_SUFFIX << std::endl;
+    for (attr_class* attrib : attribs) {
+      if (attrib->get_name() == val) {
+        if (nd->get_name() == Str) {
+          str << WORD;
+          inttable.lookup_string("0")->code_ref(str);
+          str << std::endl;
+        } else {
+          str << WORD << "0" << endl;
+        }
+      } else if (attrib->get_name() == str_field) {
+        str << WORD << "0" << endl;
+      } else {
+        Symbol type = attrib->get_name();
+        if (type == Int) {
+          str << WORD;
+          inttable.lookup_string("0")->code_ref(str);
+          str << endl;
+        } else if (type == Bool) {
+          str << WORD;
+          falsebool.code_ref(str);
+          str << endl;
+        } else if (type == Bool) {
+          str << WORD;
+          stringtable.lookup_string("")->code_ref(str);
+          str << endl;
+        } else {
+          str << WORD << "0" << endl;
+        }
+      }
+    }
+  }
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
@@ -865,8 +949,10 @@ void CgenNode::disp_traversal(ostream& str) {
     get_parentnd()->disp_traversal(str);
   }
   for (int i = features->first(); features->more(i); i = features->next(i)) {
-    // TODO: check if feature is method only
-    features->nth(i)->disPrint(name, str);
+    Feature f = features->nth(i);
+    if (f->is_method()) {
+      f->disPrint(name, str);
+    }
   }
 }
 
@@ -917,39 +1003,14 @@ void CgenClassTable::code()
     if (cgen_debug) std::cerr << "coding class name table" << std::endl;
     code_class_name_table();
 
-    // class_objTab
     if (cgen_debug) std::cerr << "coding class object table" << std::endl;
-    code_class_object_table();
-    str << CLASSOBJTAB << LABEL;
-    for (CgenNodeP nd : nds) {
-      Symbol class_ = nd->get_name();
-      str << WORD << class_->get_string() << PROTOBJ_SUFFIX << std::endl;
-      str << WORD << class_->get_string() << "_init" << std::endl;
-    }
+    code_class_obj_table();
 
-    // dispatch tables
-    for (CgenNodeP nd : nds) {
-      Symbol class_ = nd->get_name();
-      str << class_->get_string() << "_dispTab" << LABEL << std::endl;
-      // recurse to the parent, list all of its classes
-      lookup(class_)->disp_traversal(str);
-    }
+    if (cgen_debug) std::cerr << "coding dispatch tables" << std::endl;
+    code_disp_tables();
 
-    // prototype objects
-    for (CgenNodeP nd : nds) {
-      Symbol class_ = nd->get_name();
-      str << class_->get_string() << "_protObj" << LABEL << std::endl;
-      int classTag = *class_to_tag_table.lookup(class_);
-      str << WORD << classTag << std::endl;
-      // object size
-      int objectSize;
-      // dispatch ptr
-      str << WORD << class_->get_string() << "_dispTab" << std::endl;
-      // attributes
-      lookup(class_)->attr_traversal(str);
-      // garbage collector tag
-      str << WORD << -1 << std::endl;
-    }
+    if (cgen_debug) std::cerr << "coding prototype objects" << std::endl;
+    code_prot_objs();
 
     if (cgen_debug) std::cerr << "coding global text" << std::endl;
     code_global_text();
@@ -1077,7 +1138,11 @@ void let_class::code(ostream &s) {
 
 void plus_class::code(ostream &s) {
   e1->code(s);
+  emit_push(ACC, s);
   e2->code(s);
+  emit_load(T1, 1, SP, s);
+  emit_add(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void sub_class::code(ostream &s) {
