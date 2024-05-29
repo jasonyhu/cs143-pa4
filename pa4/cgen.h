@@ -71,7 +71,7 @@ public:
   CgenNodeP get_parentnd();
   int basic() { return (basic_status == Basic); }
   void disp_traversal(ostream& str);
-  void attr_traversal(ostream& str);
+  // void attr_traversal(ostream& str);
 
   std::vector<attr_class*> get_all_attrs();
 };
@@ -85,3 +85,8 @@ class BoolConst {
   void code_ref(std::ostream&) const;
 };
 
+class Environment {
+  // TODO: expand environment class, pass in to all ::code funcs
+  public:
+    SymbolTable<Symbol, int> env;
+};
