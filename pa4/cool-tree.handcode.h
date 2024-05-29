@@ -88,7 +88,8 @@ typedef Cases_class *Cases;
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
   Symbol get_name() { return name; } \
-  Symbol get_type() { return type_decl; }
+  Symbol get_type() { return type_decl; } \ 
+  Expression get_init() { return init; }
 
 
 #define Formal_EXTRAS					\

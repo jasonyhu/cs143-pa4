@@ -761,6 +761,14 @@ void CgenClassTable::code_inits() {
       str << std::endl;
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
+    for (auto attrib : attribs) {
+      if (attrib != nullptr) {
+        if (attrib->get_init()->get_type()) {
+          attrib->get_init()->code(str);
+          
+        }
+      }
+    }
     // TODO: finish init functions
   }
 }
