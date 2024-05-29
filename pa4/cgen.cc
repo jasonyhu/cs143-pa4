@@ -685,13 +685,14 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
       cn = cn->get_parentnd();
     }
     std::reverse(parents.begin(), parents.end());
-    for (CgenNode* nd : parents) {
-      Features parent_features = nd->features;
+    for (int i = 0; i < parents.size(); i++) {
+      Features parent_features = parents[i]->features;
       for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
         Feature f = parent_features->nth(j);
         if (!f->is_method()) {
           all_attrs.push_back((attr_class*)f);
         }
+        attr_ids[((attr_class*)f)->get_name()] = i;
       }
     }
   }
@@ -765,7 +766,7 @@ void CgenClassTable::code_inits() {
       if (attrib != nullptr) {
         if (attrib->get_init()->get_type()) {
           attrib->get_init()->code(str);
-          
+
         }
       }
     }

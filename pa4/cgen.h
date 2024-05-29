@@ -62,6 +62,8 @@ private:
   Basicness basic_status;
   std::vector<attr_class*> all_attrs;
   std::map<Symbol, Symbol> all_methods;
+  std::map<Symbol, int> attr_ids;
+  std::map<Symbol, int> method_ids;
 
 public:
   CgenNode(Class_ c,
@@ -77,7 +79,9 @@ public:
   // void attr_traversal(ostream& str);
 
   std::vector<attr_class*> get_all_attrs();
+  std::map<Symbol, int> get_attr_ids() { return attr_ids; };
   std::map<Symbol, Symbol> get_all_methods();
+  std::map<Symbol, int> get_method_ids() { return method_ids; };
 };
 
 class BoolConst {
