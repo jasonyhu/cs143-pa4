@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include <algorithm>
+#include <map>
 #include "cool-tree.h"
 #include "emit.h"
 #include "symtab.h"
@@ -37,6 +38,7 @@ private:
   void code_class_obj_table();
   void code_disp_tables();
   void code_prot_objs();
+  void code_inits();
 
   // The following creates an inheritance graph from a list of classes. The
   // graph is implemented as a tree of `CgenNode', and class names are placed
@@ -59,6 +61,7 @@ private:
   std::list<CgenNodeP> children;
   Basicness basic_status;
   std::vector<attr_class*> all_attrs;
+  std::map<Symbol, Symbol> all_methods;
 
 public:
   CgenNode(Class_ c,
@@ -70,10 +73,11 @@ public:
   void set_parentnd(CgenNodeP p);
   CgenNodeP get_parentnd();
   int basic() { return (basic_status == Basic); }
-  void disp_traversal(ostream& str);
+  // void disp_traversal(ostream& str);
   // void attr_traversal(ostream& str);
 
   std::vector<attr_class*> get_all_attrs();
+  std::map<Symbol, Symbol> get_all_methods();
 };
 
 class BoolConst {

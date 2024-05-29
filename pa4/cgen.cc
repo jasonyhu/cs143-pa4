@@ -642,13 +642,37 @@ void CgenClassTable::code_class_obj_table() {
   }
 }
 
+std::map<Symbol, Symbol> CgenNode::get_all_methods() {
+  if (all_methods.empty()) {
+    std::vector<CgenNode*> parents;
+    CgenNode* cn = this;
+    while (cn->name != No_class) {
+      parents.push_back(cn);
+      cn = cn->get_parentnd();
+    }
+    std::reverse(parents.begin(), parents.end());
+    for (CgenNode* nd : parents) {
+      Features parent_features = nd->features;
+      for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
+        Feature f = parent_features->nth(j);
+        if (f->is_method()) {
+          all_methods[((method_class*)f)->get_name()] = nd->get_name();
+        }
+      }
+    }
+  }
+  return all_methods;
+}
+
 void CgenClassTable::code_disp_tables() {
   for (CgenNodeP nd : nds) {
-      Symbol class_ = nd->get_name();
-      emit_disptable_ref(class_, str);
-      str << LABEL;
-      // recurse to the parent, list all of its classes
-      lookup(class_)->disp_traversal(str);
+    Symbol class_ = nd->get_name();
+    emit_disptable_ref(class_, str);
+    str << LABEL;
+    std::map<Symbol, Symbol> all_methods = nd->get_all_methods();
+    for (auto method = all_methods.begin(); method != all_methods.end(); method++) {
+      str << WORD << method->second << "." << method->first << std::endl;
+    }
   }
 }
 
@@ -700,14 +724,14 @@ void CgenClassTable::code_prot_objs() {
       } else if (attrib->get_name() == str_field) {
         str << WORD << "0" << endl;
       } else {
-        Symbol type = attrib->get_name();
+        Symbol type = attrib->get_type();
         if (type == Int) {
           str << WORD;
           inttable.lookup_string("0")->code_ref(str);
           str << endl;
         } else if (type == Str) {
           str << WORD;
-          stringtable.lookup_string("")->code_ref(str);
+          stringtable.lookup_string("0")->code_ref(str);
           str << endl;
         } else if (type == Bool) {
           str << WORD;
@@ -718,6 +742,26 @@ void CgenClassTable::code_prot_objs() {
         }
       }
     }
+  }
+}
+
+void CgenClassTable::code_inits() {
+  for (CgenNode* nd : nds) {
+    str << nd->get_name() << CLASSINIT_SUFFIX << LABEL;
+    emit_addiu(SP, SP, -12, str);
+    emit_store(FP, 3, SP, str);
+    emit_store(SELF, 2, SP, str);
+    emit_store(RA, 1, SP, str);
+    emit_addiu(FP, SP, 4, str);
+    emit_move(SELF, ACC, str);
+    Symbol parent = nd->get_parent();
+    if (parent != No_class) {
+      str << JAL;
+      emit_init_ref(parent, str);
+      str << std::endl;
+    }
+    std::vector<attr_class*> attribs = nd->get_all_attrs();
+    // TODO: finish init functions
   }
 }
 
@@ -919,45 +963,45 @@ CgenNodeP CgenNode::get_parentnd()
   return parentnd;
 }
 
-void method_class::disPrint(Symbol parent, ostream& str) {
-  str << WORD << parent->get_string() << "." << name->get_string() << std::endl;
-}
+// void method_class::disPrint(Symbol parent, ostream& str) {
+//   str << WORD << parent->get_string() << "." << name->get_string() << std::endl;
+// }
 
-// deprecated
-void attr_class::disPrint(Symbol parent, ostream& str) {
-  return;
-}
+// // deprecated
+// void attr_class::disPrint(Symbol parent, ostream& str) {
+//   return;
+// }
 
-// unused
-void method_class::attrPrint(Symbol parent, ostream& str) {
-  return;
-}
+// // unused
+// void method_class::attrPrint(Symbol parent, ostream& str) {
+//   return;
+// }
 
-// unused
-void attr_class::attrPrint(Symbol parent, ostream& str) {
-  // TODO: what is the difference between Int and void?
-  if (name == Int) {
-    str << WORD << 0 << std::endl;
-  } else if (name == Bool) {
-    str << WORD << "false" << std::endl;
-  } else if (name == Str) {
-    str << WORD << "" << std::endl;
-  } else {
-    str << WORD << 0 << std::endl;
-  }
-}
+// // unused
+// void attr_class::attrPrint(Symbol parent, ostream& str) {
+//   // TODO: what is the difference between Int and void?
+//   if (name == Int) {
+//     str << WORD << 0 << std::endl;
+//   } else if (name == Bool) {
+//     str << WORD << "false" << std::endl;
+//   } else if (name == Str) {
+//     str << WORD << "" << std::endl;
+//   } else {
+//     str << WORD << 0 << std::endl;
+//   }
+// }
 
-void CgenNode::disp_traversal(ostream& str) {
-  if (get_parentnd() != NULL) {
-    get_parentnd()->disp_traversal(str);
-  }
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
-    Feature f = features->nth(i);
-    if (f->is_method()) {
-      f->disPrint(name, str);
-    }
-  }
-}
+// void CgenNode::disp_traversal(ostream& str) {
+//   if (get_parentnd() != NULL) {
+//     get_parentnd()->disp_traversal(str);
+//   }
+//   for (int i = features->first(); features->more(i); i = features->next(i)) {
+//     Feature f = features->nth(i);
+//     if (f->is_method()) {
+//       f->disPrint(name, str);
+//     }
+//   }
+// }
 
 // void CgenNode::attr_traversal(ostream& str) {
 //   if (get_parentnd() != NULL) {
@@ -1018,6 +1062,8 @@ void CgenClassTable::code()
     if (cgen_debug) std::cerr << "coding global text" << std::endl;
     code_global_text();
 
+    if (cgen_debug) std::cerr << "coding initializers" << std::endl;
+    code_inits();
     //                 Add your code to emit
     //                   - object initializer
     //                   - the class methods
@@ -1213,7 +1259,7 @@ void isvoid_class::code(ostream &s) {
 }
 
 void no_expr_class::code(ostream &s) {
-  emit_move(ACC, ZERO, s);
+  // emit_move(ACC, ZERO, s);
 }
 
 void object_class::code(ostream &s) {
