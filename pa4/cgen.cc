@@ -923,6 +923,7 @@ void method_class::disPrint(Symbol parent, ostream& str) {
   str << WORD << parent->get_string() << "." << name->get_string() << std::endl;
 }
 
+// deprecated
 void attr_class::disPrint(Symbol parent, ostream& str) {
   return;
 }
@@ -931,6 +932,7 @@ void method_class::attrPrint(Symbol parent, ostream& str) {
   return;
 }
 
+// deprecated
 void attr_class::attrPrint(Symbol parent, ostream& str) {
   // TODO: what is the difference between Int and void?
   if (name == Int) {
