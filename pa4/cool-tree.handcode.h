@@ -7,6 +7,8 @@
 #define yylineno curr_lineno
 extern int yylineno;
 
+class Environment;
+
 typedef bool Boolean;
 
 inline Boolean copy_Boolean(Boolean b) {return b; }
@@ -69,7 +71,7 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ostream&) = 0; \
+  virtual void traverse(ostream&, Environment env) = 0; \
   virtual bool is_method() = 0;
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
@@ -77,7 +79,7 @@ typedef Cases_class *Cases;
 
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
-  void traverse(ostream&); \
+  void traverse(ostream&, Environment env); \
   // void disPrint(Symbol name, ostream& str);
   // void attrPrint(Symbol name, ostream& str);
 
@@ -88,7 +90,7 @@ typedef Cases_class *Cases;
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
   Symbol get_name() { return name; } \
-  Symbol get_type() { return type_decl; } \ 
+  Symbol get_type() { return type_decl; } \
   Expression get_init() { return init; }
 
 
@@ -99,25 +101,29 @@ typedef Cases_class *Cases;
   void dump_with_types(ostream&,int);
 
 #define Case_EXTRAS							\
-  virtual void code(ostream&) = 0;					\
+  virtual void code(ostream&, Environment env) = 0;					\
   virtual void dump_with_types(ostream& ,int) = 0;
 
 #define branch_EXTRAS						\
-  void code(ostream&);						\
+  void code(ostream&, Environment env);						\
   void dump_with_types(ostream& ,int);
 
 #define Expression_EXTRAS					   \
-  virtual void code(ostream&) = 0;				   \
+  virtual void code(ostream&, Environment env) = 0;				   \
   Symbol type;							   \
   Symbol get_type() { return type; }				   \
   Expression set_type(Symbol s) { type = s; return this; }	   \
   virtual void dump_with_types(ostream&,int) = 0;		   \
   void dump_type(ostream&, int);				   \
-  Expression_class() { type = (Symbol) NULL; }
+  Expression_class() { type = (Symbol) NULL; } \
+  bool is_empty() { return false; }
 
 #define Expression_SHARED_EXTRAS				\
-  void code(ostream&);						\
+  void code(ostream&, Environment env);						\
   void dump_with_types(ostream&,int);
+
+#define no_expr_EXTRAS \
+  bool is_empty() { return true; }
 
 
 #endif  // COOL_TREE_HANDCODE_H

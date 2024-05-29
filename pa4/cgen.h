@@ -94,7 +94,6 @@ class BoolConst {
 };
 
 class Environment {
-  // TODO: expand environment class, pass in to all ::code funcs
-  public:
-    SymbolTable<Symbol, int> env;
+  private:
+    SymbolTable<Symbol, Symbol> env;
 };

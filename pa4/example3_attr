@@ -359,6 +359,16 @@ Mom_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Parent_init
+a 1
+b 2
+abort 0
+copy 0
+type_name 0
+a 1
+b 2
+abort 0
+copy 0
+type_name 0
 Parent_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -367,6 +377,10 @@ Parent_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+a 1
+abort 0
+copy 0
+type_name 0
 Main_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -383,6 +397,22 @@ String_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+concat 1
+abort 0
+copy 0
+length 1
+_str_field 1
+substr 1
+type_name 0
+_val 1
+concat 1
+abort 0
+copy 0
+length 1
+_str_field 1
+substr 1
+type_name 0
+_val 1
 Bool_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -391,6 +421,10 @@ Bool_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+abort 0
+copy 0
+type_name 0
+_val 1
 Int_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -399,6 +433,10 @@ Int_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+abort 0
+copy 0
+type_name 0
+_val 1
 IO_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)

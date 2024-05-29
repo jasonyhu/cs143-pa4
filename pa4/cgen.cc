@@ -508,10 +508,6 @@ void CgenClassTable::code_global_data()
   Symbol string  = idtable.lookup_string(STRINGNAME);
   Symbol integer = idtable.lookup_string(INTNAME);
   Symbol boolc   = idtable.lookup_string(BOOLNAME);
-  // TODO: additional symobls
-  // Symbol class_   = idtable.lookup_string(BOOLNAME);
-  // Symbol class_   = idtable.lookup_string(BOOLNAME);
-  // Symbol class_   = idtable.lookup_string(BOOLNAME);
 
   str << "\t.data\n" << ALIGN;
   //
@@ -660,6 +656,11 @@ std::map<Symbol, Symbol> CgenNode::get_all_methods() {
         }
       }
     }
+    int i = 0;
+    for (auto it = all_methods.begin(); it != all_methods.end(); it++) {
+      method_ids[it->first] = i;
+      i++;
+    }
   }
   return all_methods;
 }
@@ -685,7 +686,7 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
       cn = cn->get_parentnd();
     }
     std::reverse(parents.begin(), parents.end());
-    for (int i = 0; i < parents.size(); i++) {
+    for (size_t i = 0; i < parents.size(); i++) {
       Features parent_features = parents[i]->features;
       for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
         Feature f = parent_features->nth(j);
@@ -762,11 +763,15 @@ void CgenClassTable::code_inits() {
       str << std::endl;
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
-    for (auto attrib : attribs) {
-      if (attrib != nullptr) {
-        if (attrib->get_init()->get_type()) {
-          attrib->get_init()->code(str);
-
+    for (attr_class* attrib : attribs) {
+      int id = nd->get_attr_ids().at(attrib->get_name());
+      if (attrib->get_init()->is_empty()) {
+        if (attrib->get_type() == Str) {
+          emit_load_string(ACC, stringtable.lookup_string(""), str);
+          emit_store(ACC, id + 3, SELF, str);
+        } else if (attrib->get_type() == Int) {
+          emit_load_int(ACC, inttable.lookup_string("0"), str);
+          emit_store(ACC, id + 3, SELF, str);
         }
       }
     }
@@ -1093,9 +1098,10 @@ void CgenClassTable::code()
     Symbol class_ = nd->get_name();
     Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
+      Environment env;
       // TODO: what does os mean in this context, am i using it wrong
       // TODO: do i even need traverse? "emit code to generate the init function"
-      features->nth(j)->traverse(str);
+      features->nth(j)->traverse(str, env);
     }
   }
 
@@ -1133,115 +1139,115 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-void method_class::traverse(ostream &s) {
+void method_class::traverse(ostream &s, Environment env) {
   // TODO: handle formals?
-  expr->code(s);
+  expr->code(s, env);
 }
 
-void attr_class::traverse(ostream &s) {
-  init->code(s);
+void attr_class::traverse(ostream &s, Environment env) {
+  init->code(s, env);
 }
 
-void branch_class::code(ostream &s) {
-  expr->code(s);
+void branch_class::code(ostream &s, Environment env) {
+  expr->code(s, env);
 }
 
-void assign_class::code(ostream &s) {
-  expr->code(s);
+void assign_class::code(ostream &s, Environment env) {
+  expr->code(s, env);
 }
 
-void static_dispatch_class::code(ostream &s) {
+void static_dispatch_class::code(ostream &s, Environment env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
-    actual->nth(i)->code(s);
+    actual->nth(i)->code(s, env);
   }
-  expr->code(s);
+  expr->code(s, env);
 }
 
-void dispatch_class::code(ostream &s) {
+void dispatch_class::code(ostream &s, Environment env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
-    actual->nth(i)->code(s);
+    actual->nth(i)->code(s, env);
   }
-  expr->code(s);
+  expr->code(s, env);
 }
 
-void cond_class::code(ostream &s) {
-  pred->code(s);
-  then_exp->code(s);
-  else_exp->code(s);
+void cond_class::code(ostream &s, Environment env) {
+  pred->code(s, env);
+  then_exp->code(s, env);
+  else_exp->code(s, env);
 }
 
-void loop_class::code(ostream &s) {
-  pred->code(s);
-  body->code(s);
+void loop_class::code(ostream &s, Environment env) {
+  pred->code(s, env);
+  body->code(s, env);
 }
 
-void typcase_class::code(ostream &s) {
-  expr->code(s);
+void typcase_class::code(ostream &s, Environment env) {
+  expr->code(s, env);
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
-    cases->nth(i)->code(s);
+    cases->nth(i)->code(s, env);
   }
 }
 
-void block_class::code(ostream &s) {
+void block_class::code(ostream &s, Environment env) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {
     Expression exp = body->nth(i);
-    exp->code(s);
+    exp->code(s, env);
   }
 }
 
-void let_class::code(ostream &s) {
-  init->code(s);
-  body->code(s);
+void let_class::code(ostream &s, Environment env) {
+  init->code(s, env);
+  body->code(s, env);
 }
 
-void plus_class::code(ostream &s) {
-  e1->code(s);
+void plus_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
   emit_push(ACC, s);
-  e2->code(s);
+  e2->code(s, env);
   emit_load(T1, 1, SP, s);
   emit_add(ACC, T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
 }
 
-void sub_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void sub_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void mul_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void mul_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void divide_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void divide_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void neg_class::code(ostream &s) {
-  e1->code(s);
+void neg_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
 }
 
-void lt_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void lt_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void eq_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void eq_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void leq_class::code(ostream &s) {
-  e1->code(s);
-  e2->code(s);
+void leq_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
+  e2->code(s, env);
 }
 
-void comp_class::code(ostream &s) {
-  e1->code(s);
+void comp_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
 }
 
-void int_const_class::code(ostream& s)
+void int_const_class::code(ostream& s, Environment env)
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1249,29 +1255,29 @@ void int_const_class::code(ostream& s)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s)
+void string_const_class::code(ostream& s, Environment env)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s)
+void bool_const_class::code(ostream& s, Environment env)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s) {
+void new__class::code(ostream &s, Environment env) {
 
 }
 
-void isvoid_class::code(ostream &s) {
-  e1->code(s);
+void isvoid_class::code(ostream &s, Environment env) {
+  e1->code(s, env);
 }
 
-void no_expr_class::code(ostream &s) {
+void no_expr_class::code(ostream &s, Environment env) {
   // emit_move(ACC, ZERO, s);
 }
 
-void object_class::code(ostream &s) {
-
+void object_class::code(ostream &s, Environment env) {
+  int idx;
 }
 
