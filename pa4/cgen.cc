@@ -1134,7 +1134,7 @@ CgenNodeP CgenClassTable::get_class_node(Symbol name)  {
         return nd;
       }
     }
-    cerr << "class name not found!" << endl;
+    cout << "class name not found!" << endl;
     return NULL;
   }
 
@@ -1231,11 +1231,11 @@ void dispatch_class::code(ostream &s, Environment env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
-
-  CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
+      // SEGFAULTS HERE
+  // CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
   emit_load(T1, 2, ACC, s);
-  int id = cur_class_node->get_method_ids().at(name);
-  emit_load(T1, id, T1, s);
+  // int id = cur_class_node->get_method_ids().at(name);
+  // emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
 
