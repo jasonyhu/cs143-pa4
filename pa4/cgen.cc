@@ -768,10 +768,13 @@ void CgenClassTable::code_inits() {
       if (attrib->get_init()->is_empty()) {
         if (attrib->get_type() == Str) {
           emit_load_string(ACC, stringtable.lookup_string(""), str);
+          emit_store(ACC, id + 3, SELF, str);
         } else if (attrib->get_type() == Int) {
           emit_load_int(ACC, inttable.lookup_string("0"), str);
+          emit_store(ACC, id + 3, SELF, str);
         } else if (attrib->get_type() == Bool) {
           emit_load_bool(ACC, BoolConst(0), str);
+          emit_store(ACC, id + 3, SELF, str);
         }
       } else {
         Environment env;
