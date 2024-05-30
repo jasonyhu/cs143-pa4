@@ -782,6 +782,7 @@ void CgenClassTable::code_inits() {
         }
       } else {
         Environment env(nd);
+        env.nds = nds;
         attrib->get_init()->code(str, env);
       }
     }
@@ -1117,7 +1118,7 @@ void CgenClassTable::code()
     Symbol class_ = nd->get_name();
     Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
-      features->nth(j)->code(str, nd);
+      features->nth(j)->code(str, nd, nds);
     }
   }
 
@@ -1135,7 +1136,7 @@ CgenNodeP CgenClassTable::get_class_node(Symbol name)  {
         return nd;
       }
     }
-    cerr << "class name not found!" << endl;
+    cout << "class name not found!" << endl;
     return NULL;
   }
 
@@ -1168,16 +1169,18 @@ Environment::Environment(CgenNodeP so) : so(so) {
 //
 //*****************************************************************
 
-void method_class::code(ostream &s, CgenNodeP nd) {
+void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
   emit_addiu(SP, SP, -12, s);
   emit_store(FP, 3, SP, s);
   emit_store(SELF, 2, SP, s);
   emit_store(RA, 1, SP ,s);
-  emit_addiu(FP, SP, 4, s);
+  // ALEX: changed offset from 4 to 16 to conform to test code
+  emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
   Environment env(nd);
+  env.nds = nds;
   int arg_count = 0;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
@@ -1192,8 +1195,9 @@ void method_class::code(ostream &s, CgenNodeP nd) {
   emit_return(s);
 }
 
-void attr_class::code(ostream &s, CgenNodeP nd) {
+void attr_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   Environment env(nd);
+  env.nds = nds;
   init->code(s, env);
 }
 
@@ -1232,8 +1236,15 @@ void dispatch_class::code(ostream &s, Environment env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
-
-  CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
+  // seg faults here
+  CgenNodeP cur_class_node; 
+  // codegen_classtable->get_class_node(cur_class);
+  for (CgenNodeP nd : env.nds) {
+      if (cur_class == nd->get_name()) {
+        cur_class_node = nd;
+        break;
+      }
+  }
   emit_load(T1, 2, ACC, s);
   int id = cur_class_node->get_method_ids().at(name);
   emit_load(T1, id, T1, s);
@@ -1281,21 +1292,35 @@ void plus_class::code(ostream &s, Environment env) {
 
 void sub_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_sub(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void mul_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_mul(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void divide_class::code(ostream &s, Environment env) {
+  // TODO: divide by 0 error?
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_div(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void neg_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  // emit_neg()
 }
 
 void lt_class::code(ostream &s, Environment env) {

@@ -9,6 +9,7 @@ extern int yylineno;
 
 class Environment;
 class CgenNode;
+typedef CgenNode *CgenNodeP;
 
 typedef bool Boolean;
 
@@ -72,7 +73,7 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void code(ostream&, CgenNode* so) = 0; \
+  virtual void code(ostream&, CgenNode* so, std::list<CgenNodeP> nds) = 0; \
   virtual bool is_method() = 0;
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
@@ -80,7 +81,7 @@ typedef Cases_class *Cases;
 
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
-  void code(ostream&, CgenNode* so); \
+  void code(ostream&, CgenNode* so, std::list<CgenNodeP> nds); \
   // void disPrint(Symbol name, ostream& str);
   // void attrPrint(Symbol name, ostream& str);
 
