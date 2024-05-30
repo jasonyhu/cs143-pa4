@@ -757,7 +757,8 @@ void CgenClassTable::code_inits() {
     emit_store(FP, 3, SP, str);
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
-    emit_addiu(FP, SP, 4, str);
+    // ALEX: chanaged this to 16 to conform to reference
+    emit_addiu(FP, SP, 16, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
     if (parent != No_class) {
@@ -781,6 +782,7 @@ void CgenClassTable::code_inits() {
         }
       } else {
         Environment env(nd);
+        env.nds = nds;
         attrib->get_init()->code(str, env);
       }
     }
@@ -1116,7 +1118,7 @@ void CgenClassTable::code()
     Symbol class_ = nd->get_name();
     Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
-      features->nth(j)->code(str, nd);
+      features->nth(j)->code(str, nd, nds);
     }
   }
 
@@ -1167,16 +1169,18 @@ Environment::Environment(CgenNodeP so) : so(so) {
 //
 //*****************************************************************
 
-void method_class::code(ostream &s, CgenNodeP nd) {
+void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
   emit_addiu(SP, SP, -12, s);
   emit_store(FP, 3, SP, s);
   emit_store(SELF, 2, SP, s);
   emit_store(RA, 1, SP ,s);
-  emit_addiu(FP, SP, 4, s);
+  // ALEX: changed offset from 4 to 16 to conform to test code
+  emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
   Environment env(nd);
+  env.nds = nds;
   int arg_count = 0;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
@@ -1191,8 +1195,9 @@ void method_class::code(ostream &s, CgenNodeP nd) {
   emit_return(s);
 }
 
-void attr_class::code(ostream &s, CgenNodeP nd) {
+void attr_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   Environment env(nd);
+  env.nds = nds;
   init->code(s, env);
 }
 
@@ -1231,9 +1236,15 @@ void dispatch_class::code(ostream &s, Environment env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
-      // SEGFAULTS HERE
-  // CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
-  cout << codegen_classtable;
+  // seg faults here
+  CgenNodeP cur_class_node; 
+  // codegen_classtable->get_class_node(cur_class);
+  for (CgenNodeP nd : env.nds) {
+      if (cur_class == nd->get_name()) {
+        cur_class_node = nd;
+        break;
+      }
+  }
   emit_load(T1, 2, ACC, s);
   // int id = cur_class_node->get_method_ids().at(name);
   // emit_load(T1, id, T1, s);
@@ -1281,21 +1292,35 @@ void plus_class::code(ostream &s, Environment env) {
 
 void sub_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_sub(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void mul_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_mul(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void divide_class::code(ostream &s, Environment env) {
+  // TODO: divide by 0 error?
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_div(ACC, T1, ACC, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void neg_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  // emit_neg()
 }
 
 void lt_class::code(ostream &s, Environment env) {
@@ -1336,6 +1361,40 @@ void bool_const_class::code(ostream& s, Environment env)
 }
 
 void new__class::code(ostream &s, Environment env) {
+  // might be different for basic classes
+  // TODO: refactor this into other JAL emits
+  if (type_name == SELF_TYPE) {
+  /* An offset into this table for creating an object with the same dynamic type as self can be computed by
+  reading the class tag for self, add/subtract/multiply this value by constants, and add it to the address
+  of class objTab. */
+    // TODO: revisit with more classes
+    // TODO: add self to the class_to_tag_table lookup table
+    // class_to_tag_table.lookup(self);
+    // TODO: what the hell is s1
+    // TODO: i just transcribed the results so this definitely needs a second check
+    emit_store("$s1", 1, FP, s);
+    emit_load_address(T1, "class_objTab", s);
+    emit_load(T2, 0, SELF, s);
+    // add/multiplies the class tag by a constant
+    emit_sll(T2, T2, 3, s);
+    // computes offset within class_objTab (NEEDS ADJUSTMENT)
+    emit_addu(T1, T1, T2, s);
+    emit_move("$s1", T1, s);
+    emit_load(ACC, 0, T1, s);
+    emit_jal("Object.copy", s);
+    emit_load(T1, 1, "$s1", s);
+    emit_jalr(T1, s);
+    // different for attributes
+    emit_load("$s1", 1, FP, s);
+    // TODO: where do we use _init? does this need a stack machine?
+  } else {
+    emit_partial_load_address(ACC, s);
+    s << type_name->get_string() << PROTOBJ_SUFFIX << std::endl;
+    emit_jal("Object.copy", s);
+    s << JAL << type_name->get_string() << CLASSINIT_SUFFIX << std::endl;
+  }  
+  // case that allocates an object of SELF_TYPE
+  // object allocated should be of the same type as the dynamic type of the self object
 
 }
 

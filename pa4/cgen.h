@@ -90,7 +90,7 @@ class BoolConst {
   int val;
  public:
   BoolConst(int);
-  void code_def(std::ostream&, int boolclasstag);
+  void code_def(std::ostream&, int boolclasffstag);
   void code_ref(std::ostream&) const;
 };
 
@@ -99,4 +99,5 @@ class Environment {
     SymbolTable<Symbol, Entry> vars;
     CgenNodeP so;
     Environment(CgenNodeP self_object);
+    std::list<CgenNodeP> nds;
 };
