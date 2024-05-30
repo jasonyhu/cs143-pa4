@@ -11,7 +11,7 @@
 //       `StringEntry::code_def'
 //       `BoolConst::code_def'
 //
-//    Add code to emit everyting else that is needed
+//    Add code to emit everything else that is needed
 //       in `CgenClassTable::code'
 //
 //
@@ -24,6 +24,9 @@
 #include "cgen.h"
 #include "cgen_supp.h"
 #include "handle_flags.h"
+
+int label = 0;
+CgenClassTable *codegen_classtable;
 
 //
 // Two symbols from the semantic analyzer (semant.cc) are used.
@@ -130,7 +133,7 @@ BoolConst truebool(TRUE);
 //*********************************************************
 void program_class::cgen(ostream &os) {
    initialize_constants();
-   CgenClassTable *codegen_classtable = new CgenClassTable(classes,os);
+   codegen_classtable = new CgenClassTable(classes,os);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -777,8 +780,7 @@ void CgenClassTable::code_inits() {
           emit_store(ACC, id + 3, SELF, str);
         }
       } else {
-        Environment env;
-        env.so = nd;
+        Environment env(nd);
         attrib->get_init()->code(str, env);
       }
     }
@@ -1106,16 +1108,17 @@ void CgenClassTable::code()
   If the attribute's initializer is an integer constant, it will call int_const_class::code.
   */
   // TODO: add more passes depending on what we need
-  // for (CgenNodeP nd : nds) {
-  //   Symbol class_ = nd->get_name();
-  //   Features features = lookup(class_)->get_features();
-  //   for (int j = features->first(); features->more(j); j = features->next(j)) {
-  //     Environment env;
-  //     // TODO: what does os mean in this context, am i using it wrong
-  //     // TODO: do i even need traverse? "emit code to generate the init function"
-  //     features->nth(j)->traverse(str, env);
-  //   }
-  // }
+  for (CgenNodeP nd : nds) {
+    Symbol name = nd->get_name();
+    if (name == Object || name == Str || name == IO || name == Bool || name == Int) {
+      continue;
+    }
+    Symbol class_ = nd->get_name();
+    Features features = lookup(class_)->get_features();
+    for (int j = features->first(); features->more(j); j = features->next(j)) {
+      features->nth(j)->code(str, nd);
+    }
+  }
 
 }
 
@@ -1124,6 +1127,16 @@ CgenNodeP CgenClassTable::root()
 {
    return probe(Object);
 }
+
+CgenNodeP CgenClassTable::get_class_node(Symbol name)  {
+    for (CgenNodeP nd : nds) {
+      if (name == nd->get_name()) {
+        return nd;
+      }
+    }
+    cerr << "class name not found!" << endl;
+    return NULL;
+  }
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -1140,6 +1153,9 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
   stringtable.add_string(name->get_string());          // Add class name to string table
 }
 
+Environment::Environment(CgenNodeP so) : so(so) {
+  vars.enterscope();
+}
 
 //******************************************************************
 //
@@ -1151,12 +1167,32 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-void method_class::traverse(ostream &s, Environment env) {
-  // TODO: handle formals?
+void method_class::code(ostream &s, CgenNodeP nd) {
+  emit_method_ref(nd->get_name(), name, s);
+  s << LABEL;
+  emit_addiu(SP, SP, -12, s);
+  emit_store(FP, 3, SP, s);
+  emit_store(SELF, 2, SP, s);
+  emit_store(RA, 1, SP ,s);
+  emit_addiu(FP, SP, 4, s);
+  emit_move(SELF, ACC, s);
+  Environment env(nd);
+  int arg_count = 0;
+  for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
+    env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
+    arg_count++;
+  }
   expr->code(s, env);
+  emit_load(FP, 3, SP, s);
+  emit_load(SELF, 2, SP, s);
+  emit_load(RA, 1, SP, s);
+  emit_addiu(SP, SP, 12, s);
+  emit_addiu(SP, SP, arg_count * 4, s);
+  emit_return(s);
 }
 
-void attr_class::traverse(ostream &s, Environment env) {
+void attr_class::code(ostream &s, CgenNodeP nd) {
+  Environment env(nd);
   init->code(s, env);
 }
 
@@ -1178,8 +1214,29 @@ void static_dispatch_class::code(ostream &s, Environment env) {
 void dispatch_class::code(ostream &s, Environment env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
+    emit_push(ACC, s);
   }
+
   expr->code(s, env);
+
+  emit_bne(ACC, ZERO, label, s);
+  s << LA << ACC << " str_const0" << std::endl;
+  emit_load_imm(T1, line_number, s);
+  emit_jal("_dispatch_abort", s);
+
+  emit_label_def(label, s);
+  label++;
+
+  Symbol cur_class = env.so->get_name();
+  if (expr->get_type() != SELF_TYPE) {
+    cur_class = expr->get_type();
+  }
+
+  CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
+  emit_load(T1, 2, ACC, s);
+  int id = cur_class_node->get_method_ids().at(name);
+  emit_load(T1, id, T1, s);
+  emit_jalr(T1, s);
 }
 
 void cond_class::code(ostream &s, Environment env) {
@@ -1286,7 +1343,7 @@ void isvoid_class::code(ostream &s, Environment env) {
 }
 
 void no_expr_class::code(ostream &s, Environment env) {
-  // emit_move(ACC, ZERO, s);
+  emit_move(ACC, ZERO, s);
 }
 
 void object_class::code(ostream &s, Environment env) {

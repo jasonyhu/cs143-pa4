@@ -52,6 +52,7 @@ public:
   CgenClassTable(Classes, std::ostream& str);
   void code();
   CgenNodeP root();
+  CgenNodeP get_class_node(Symbol name);
 };
 
 class CgenNode : public class__class {
@@ -95,6 +96,7 @@ class BoolConst {
 
 class Environment {
   public:
-    SymbolTable<Symbol, Symbol> env;
+    SymbolTable<Symbol, Entry> vars;
     CgenNodeP so;
+    Environment(CgenNodeP self_object);
 };

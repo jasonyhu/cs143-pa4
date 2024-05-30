@@ -496,7 +496,7 @@ IO_init:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	jr	$ra	
+	jr	$ra
 Main.main:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)

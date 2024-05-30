@@ -8,6 +8,7 @@
 extern int yylineno;
 
 class Environment;
+class CgenNode;
 
 typedef bool Boolean;
 
@@ -71,7 +72,7 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void traverse(ostream&, Environment env) = 0; \
+  virtual void code(ostream&, CgenNode* so) = 0; \
   virtual bool is_method() = 0;
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
@@ -79,13 +80,13 @@ typedef Cases_class *Cases;
 
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
-  void traverse(ostream&, Environment env); \
+  void code(ostream&, CgenNode* so); \
   // void disPrint(Symbol name, ostream& str);
   // void attrPrint(Symbol name, ostream& str);
 
 #define method_EXTRAS       \
   bool is_method() { return true; }; \
-  Symbol get_name() { return name; }
+  Symbol get_name() { return name; } 
 
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
@@ -95,10 +96,12 @@ typedef Cases_class *Cases;
 
 
 #define Formal_EXTRAS					\
-  virtual void dump_with_types(ostream&,int) = 0;
+  virtual void dump_with_types(ostream&,int) = 0; \
+  virtual Symbol get_name() = 0;
 
 #define formal_EXTRAS                           \
-  void dump_with_types(ostream&,int);
+  void dump_with_types(ostream&,int); \
+  Symbol get_name() { return name; };
 
 #define Case_EXTRAS							\
   virtual void code(ostream&, Environment env) = 0;					\
