@@ -1359,8 +1359,9 @@ void new__class::code(ostream &s, Environment env) {
     emit_jal("Object.copy", s);
     emit_load(T1, 1, "$s1", s);
     emit_jalr(T1, s);
+    // different for attributes
     emit_load("$s1", 1, FP, s);
-    // TODO: where do we use _init?
+    // TODO: where do we use _init? does this need a stack machine?
   } else {
     emit_partial_load_address(ACC, s);
     s << type_name->get_string() << PROTOBJ_SUFFIX << std::endl;
