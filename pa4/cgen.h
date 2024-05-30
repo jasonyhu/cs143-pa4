@@ -94,6 +94,7 @@ class BoolConst {
 };
 
 class Environment {
-  private:
+  public:
     SymbolTable<Symbol, Symbol> env;
+    CgenNodeP so;
 };

@@ -359,16 +359,20 @@ Mom_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Parent_init
-a 1
-b 2
-abort 0
-copy 0
-type_name 0
-a 1
-b 2
-abort 0
-copy 0
-type_name 0
+	la	$a0 int_const1
+	la	$a0 int_const0
+	sw	$a0 0($sp)
+	addiu	$sp $sp -4
+	la	$a0 int_const2
+	lw	$t1 4($sp)
+	add	$a0 $t1 $a0
+	addiu	$sp $sp 4
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 Parent_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -377,10 +381,13 @@ Parent_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
-a 1
-abort 0
-copy 0
-type_name 0
+	la	$a0 int_const1
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 Main_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -389,6 +396,12 @@ Main_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 String_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -397,22 +410,12 @@ String_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
-concat 1
-abort 0
-copy 0
-length 1
-_str_field 1
-substr 1
-type_name 0
-_val 1
-concat 1
-abort 0
-copy 0
-length 1
-_str_field 1
-substr 1
-type_name 0
-_val 1
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 Bool_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -421,10 +424,12 @@ Bool_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
-abort 0
-copy 0
-type_name 0
-_val 1
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 Int_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -433,10 +438,12 @@ Int_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
-abort 0
-copy 0
-type_name 0
-_val 1
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 IO_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -445,6 +452,12 @@ IO_init:
 	addiu	$fp $sp 4
 	move	$s0 $a0
 	jal	Object_init
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
 Object_init:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -452,12 +465,9 @@ Object_init:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 4
 	move	$s0 $a0
-	la	$a0 int_const0
-	sw	$a0 0($sp)
-	addiu	$sp $sp -4
-	la	$a0 int_const2
-	lw	$t1 4($sp)
-	add	$a0 $t1 $a0
-	addiu	$sp $sp 4
-	la	$a0 int_const1
-	la	$a0 int_const0
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	

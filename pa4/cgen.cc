@@ -768,14 +768,23 @@ void CgenClassTable::code_inits() {
       if (attrib->get_init()->is_empty()) {
         if (attrib->get_type() == Str) {
           emit_load_string(ACC, stringtable.lookup_string(""), str);
-          emit_store(ACC, id + 3, SELF, str);
         } else if (attrib->get_type() == Int) {
           emit_load_int(ACC, inttable.lookup_string("0"), str);
-          emit_store(ACC, id + 3, SELF, str);
+        } else if (attrib->get_type() == Bool) {
+          emit_load_bool(ACC, BoolConst(0), str);
         }
+      } else {
+        Environment env;
+        env.so = nd;
+        attrib->get_init()->code(str, env);
       }
     }
-    // TODO: finish init functions
+    emit_move(ACC, SELF, str);
+    emit_load(FP, 3, SP, str);
+    emit_load(SELF, 2, SP, str);
+    emit_load(RA, 1, SP, str);
+    emit_addiu(SP, SP, 12, str);
+    emit_return(str);
   }
 }
 
@@ -1094,16 +1103,16 @@ void CgenClassTable::code()
   If the attribute's initializer is an integer constant, it will call int_const_class::code.
   */
   // TODO: add more passes depending on what we need
-  for (CgenNodeP nd : nds) {
-    Symbol class_ = nd->get_name();
-    Features features = lookup(class_)->get_features();
-    for (int j = features->first(); features->more(j); j = features->next(j)) {
-      Environment env;
-      // TODO: what does os mean in this context, am i using it wrong
-      // TODO: do i even need traverse? "emit code to generate the init function"
-      features->nth(j)->traverse(str, env);
-    }
-  }
+  // for (CgenNodeP nd : nds) {
+  //   Symbol class_ = nd->get_name();
+  //   Features features = lookup(class_)->get_features();
+  //   for (int j = features->first(); features->more(j); j = features->next(j)) {
+  //     Environment env;
+  //     // TODO: what does os mean in this context, am i using it wrong
+  //     // TODO: do i even need traverse? "emit code to generate the init function"
+  //     features->nth(j)->traverse(str, env);
+  //   }
+  // }
 
 }
 

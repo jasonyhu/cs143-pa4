@@ -226,37 +226,37 @@ class_objTab:
 	.word	Object_protObj
 	.word	Object_init
 Main_dispTab:
-	.word	Object.abort
-	.word	Object.type_name
-	.word	Object.copy
 	.word	Main.main
-String_dispTab:
 	.word	Object.abort
+	.word	Object.copy
 	.word	Object.type_name
+String_dispTab:
+	.word	String.concat
+	.word	Object.abort
 	.word	Object.copy
 	.word	String.length
-	.word	String.concat
 	.word	String.substr
+	.word	Object.type_name
 Bool_dispTab:
 	.word	Object.abort
-	.word	Object.type_name
 	.word	Object.copy
+	.word	Object.type_name
 Int_dispTab:
 	.word	Object.abort
-	.word	Object.type_name
 	.word	Object.copy
+	.word	Object.type_name
 IO_dispTab:
 	.word	Object.abort
-	.word	Object.type_name
 	.word	Object.copy
-	.word	IO.out_string
-	.word	IO.out_int
-	.word	IO.in_string
 	.word	IO.in_int
+	.word	IO.in_string
+	.word	IO.out_int
+	.word	IO.out_string
+	.word	Object.type_name
 Object_dispTab:
 	.word	Object.abort
-	.word	Object.type_name
 	.word	Object.copy
+	.word	Object.type_name
 	.word	-1
 Main_protObj:
 	.word	5
@@ -300,24 +300,90 @@ heap_start:
 	.globl	String_init
 	.globl	Bool_init
 	.globl	Main.main
-	la	$a0 int_const0
-	sw	$a0 0($sp)
-	addiu	$sp $sp -4
-	la	$a0 int_const1
-	lw	$t1 4($sp)
-	add	$a0 $t1 $a0
-	addiu	$sp $sp 4
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
-	move	$a0 $zero
+Main_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	jal	Object_init
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
+String_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	jal	Object_init
+	sw	$a0 16($s0)
+	sw	$a0 16($s0)
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
+Bool_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	jal	Object_init
+	sw	$a0 16($s0)
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
+Int_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	jal	Object_init
+	sw	$a0 16($s0)
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
+IO_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	jal	Object_init
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
+Object_init:
+	addiu	$sp $sp -12
+	sw	$fp 12($sp)
+	sw	$s0 8($sp)
+	sw	$ra 4($sp)
+	addiu	$fp $sp 16
+	move	$s0 $a0
+	move	$a0 $s0
+	lw	$fp 12($sp)
+	lw	$s0 8($sp)
+	lw	$ra 4($sp)
+	addiu	$sp $sp 12
+	jr	$ra	
