@@ -757,7 +757,8 @@ void CgenClassTable::code_inits() {
     emit_store(FP, 3, SP, str);
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
-    emit_addiu(FP, SP, 4, str);
+    // ALEX: chanaged this to 16 to conform to reference
+    emit_addiu(FP, SP, 16, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
     if (parent != No_class) {
@@ -1335,6 +1336,39 @@ void bool_const_class::code(ostream& s, Environment env)
 }
 
 void new__class::code(ostream &s, Environment env) {
+  // might be different for basic classes
+  // TODO: refactor this into other JAL emits
+  if (type_name == SELF_TYPE) {
+  /* An offset into this table for creating an object with the same dynamic type as self can be computed by
+  reading the class tag for self, add/subtract/multiply this value by constants, and add it to the address
+  of class objTab. */
+    // TODO: revisit with more classes
+    // TODO: add self to the class_to_tag_table lookup table
+    // class_to_tag_table.lookup(self);
+    // TODO: what the hell is s1
+    // TODO: i just transcribed the results so this definitely needs a second check
+    emit_store("$s1", 1, FP, s);
+    emit_load_address(T1, "class_objTab", s);
+    emit_load(T2, 0, SELF, s);
+    // add/multiplies the class tag by a constant
+    emit_sll(T2, T2, 3, s);
+    // computes offset within class_objTab (NEEDS ADJUSTMENT)
+    emit_addu(T1, T1, T2, s);
+    emit_move("$s1", T1, s);
+    emit_load(ACC, 0, T1, s);
+    emit_jal("Object.copy", s);
+    emit_load(T1, 1, "$s1", s);
+    emit_jalr(T1, s);
+    emit_load("$s1", 1, FP, s);
+    // TODO: where do we use _init?
+  } else {
+    emit_partial_load_address(ACC, s);
+    s << type_name->get_string() << PROTOBJ_SUFFIX << std::endl;
+    emit_jal("Object.copy", s);
+    s << JAL << type_name->get_string() << CLASSINIT_SUFFIX << std::endl;
+  }  
+  // case that allocates an object of SELF_TYPE
+  // object allocated should be of the same type as the dynamic type of the self object
 
 }
 
