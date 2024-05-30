@@ -1233,6 +1233,7 @@ void dispatch_class::code(ostream &s, Environment env) {
   }
       // SEGFAULTS HERE
   // CgenNodeP cur_class_node = codegen_classtable->get_class_node(cur_class);
+  cout << codegen_classtable;
   emit_load(T1, 2, ACC, s);
   // int id = cur_class_node->get_method_ids().at(name);
   // emit_load(T1, id, T1, s);
