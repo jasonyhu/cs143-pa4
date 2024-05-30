@@ -1,9 +1,9 @@
-
-(*  Example cool program testing as many aspects of the code generator
-    as possible.
- *)
+class A {
+  foo():Int {2 + 2};
+};
 
 class Main {
-  main():Int { 42 + 5 };
+  b: A;
+  main():Int { b.foo() };
 };
 
