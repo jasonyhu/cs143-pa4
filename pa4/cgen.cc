@@ -1193,12 +1193,14 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_return(s);
 }
 
+// TODO
 void attr_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   Environment env(nd);
   env.nds = nds;
   init->code(s, env);
 }
 
+// TODO
 void branch_class::code(ostream &s, Environment env) {
   expr->code(s, env);
 }
@@ -1224,10 +1226,8 @@ void assign_class::code(ostream &s, Environment env) {
 void static_dispatch_class::code(ostream &s, Environment env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
+    emit_push(ACC, s);
   }
-
-  emit_push(ACC, s); // TODO: replace this bad line
-  // WHY DOES THIS WORK DDDD: -- JASON
 
   expr->code(s, env);
 
