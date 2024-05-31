@@ -1288,6 +1288,7 @@ void plus_class::code(ostream &s, Environment env) {
   emit_load(T1, 1, SP, s);
   emit_add(ACC, T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
+  // TODO: we need to create a new object.
 }
 
 void sub_class::code(ostream &s, Environment env) {
