@@ -1181,6 +1181,7 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
     arg_count++;
   }
   expr->code(s, env);
+  // TODO: for dispatch calls, move here in conditions
   emit_load(FP, 3, SP, s);
   emit_load(SELF, 2, SP, s);
   emit_load(RA, 1, SP, s);
@@ -1201,6 +1202,20 @@ void branch_class::code(ostream &s, Environment env) {
 
 void assign_class::code(ostream &s, Environment env) {
   expr->code(s, env);
+  // expr is stored in ACC
+
+  CgenNodeP cur_class_node; 
+  Symbol cur_class = env.so->get_name();
+  for (CgenNodeP nd : env.nds) {
+      if (cur_class == nd->get_name()) {
+        cur_class_node = nd;
+        break;
+      }
+  }
+  int id = cur_class_node->get_attr_ids().at(name);
+
+  // dest should be E(id) or the attr offset
+  emit_store(ACC, id + 2, SELF, s);
 }
 
 void static_dispatch_class::code(ostream &s, Environment env) {
@@ -1250,8 +1265,19 @@ void dispatch_class::code(ostream &s, Environment env) {
 
 void cond_class::code(ostream &s, Environment env) {
   pred->code(s, env);
+
+  emit_load(T1, 3, ACC, s);
+  emit_beqz(T1, label, s);
   then_exp->code(s, env);
+  // TODO: THIS BRANCH SHOULD POINT TO THE LAST LABEL IN THE CONDITIONAL. BUT IDK HOW TO READ THE FUTURE WHEN ELSE_EXP CAN HAVE AS MANY LABELS....
+  emit_branch(label + 2, s);
+  emit_label_def(label, s);
+  label++;
   else_exp->code(s, env);
+  emit_label_def(label, s);
+  label++;
+
+
 }
 
 void loop_class::code(ostream &s, Environment env) {
@@ -1336,23 +1362,63 @@ void neg_class::code(ostream &s, Environment env) {
 
 void lt_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
 
+  emit_load_bool(ACC, truebool, s);
+  emit_blt(T1, T2, label, s);
+  emit_label_def(label, s);
+  label++;
+  emit_load_bool(ACC, falsebool, s);
+
+  emit_addiu(SP, SP, 4, s);
 }
 
 void eq_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_move(T2, ACC, s);
+
+  emit_load_bool(ACC, truebool, s);
+  emit_beq(T1, T2, label, s);
+  emit_label_def(label, s);
+  label++;
+  emit_load_bool(ACC, falsebool, s);
+
+  emit_addiu(SP, SP, 4, s);
+  emit_jal("equality_test", s);
 }
 
 void leq_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_push(ACC, s);
   e2->code(s, env);
+  emit_load(T1, 1, SP, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
+
+  emit_load_bool(ACC, truebool, s);
+  emit_bleq(T1, T2, label, s);
+  emit_label_def(label, s);
+  label++;
+  emit_load_bool(ACC, falsebool, s);
+  
+  emit_addiu(SP, SP, 4, s);
 }
 
 void comp_class::code(ostream &s, Environment env) {
-  // is this not?
   e1->code(s, env);
+  emit_load(T1, 3, ACC, s);
+  emit_load_bool(ACC, truebool, s);
+  emit_beqz(T1, label, s);
+  emit_label_def(label, s);
+  label++;
+  emit_load_bool(ACC, falsebool, s);
 }
 
 void int_const_class::code(ostream& s, Environment env)
@@ -1403,6 +1469,7 @@ void new__class::code(ostream &s, Environment env) {
     emit_partial_load_address(ACC, s);
     s << type_name->get_string() << PROTOBJ_SUFFIX << std::endl;
     emit_jal("Object.copy", s);
+    // TODO: question - do the inits set non-basic attrs to the default initializations?
     s << JAL << type_name->get_string() << CLASSINIT_SUFFIX << std::endl;
   }  
   // case that allocates an object of SELF_TYPE
@@ -1419,8 +1486,8 @@ void no_expr_class::code(ostream &s, Environment env) {
 }
 
 void object_class::code(ostream &s, Environment env) {
+  // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
-  // codegen_classtable->get_class_node(cur_class);
   Symbol cur_class = env.so->get_name();
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
