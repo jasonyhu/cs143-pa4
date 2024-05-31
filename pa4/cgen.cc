@@ -703,15 +703,14 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
       }
     }
     for (size_t i = 0; i < all_attrs.size(); i++) {
-      method_ids[all_attrs[i]->get_name()] = i;
-      i++;
+      attr_ids[all_attrs[i]->get_name()] = i;
     }
   }
-  cout << endl << endl << "printing attribs:";
-  for(attr_class* attrib : all_attrs) {
-    attrib->dump(cout, 1);
-  }
-  cout << endl << endl;
+  // cout << endl << endl << "printing attribs:" << endl;
+  // for(attr_class* attrib : all_attrs) {
+  //   attrib->dump(cout, 1);
+  // }
+  // cout << endl << endl;
   return all_attrs;
 }
 
@@ -1247,7 +1246,6 @@ void dispatch_class::code(ostream &s, Environment env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
-  // seg faults here
   CgenNodeP cur_class_node; 
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
@@ -1257,7 +1255,7 @@ void dispatch_class::code(ostream &s, Environment env) {
   }
   emit_load(T1, 2, ACC, s);
   // int id = cur_class_node->get_method_ids().at(name);
-  // emit_load(T1, id, T1, s);
+  emit_load(T1, 3, T1, s); // bad magic number
   emit_jalr(T1, s);
 }
 
