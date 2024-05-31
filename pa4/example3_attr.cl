@@ -8,4 +8,5 @@ class Parent {
 
 class Mom inherits Parent {
     b:Int <- 1+2;
+    c:Mom;
 };

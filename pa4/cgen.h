@@ -96,8 +96,15 @@ class BoolConst {
 
 class Environment {
   public:
+    Environment(CgenNodeP so) : so(so) { vars.enterscope(); };
     SymbolTable<Symbol, Entry> vars;
-    CgenNodeP so;
-    Environment(CgenNodeP self_object);
     std::list<CgenNodeP> nds;
+    int lookup_param(Symbol name);
+    int lookup_attr(Symbol name);
+    int lookup_var(Symbol name);
+    CgenNodeP get_so() const { return so; }
+  private:
+    CgenNodeP so;
+    std::vector<Symbol> let_vars;
+    std::vector<Symbol> params;
 };

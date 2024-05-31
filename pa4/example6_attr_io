@@ -321,7 +321,7 @@ Object_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	move	$a0 $s0
 	lw	$fp 12($sp)
@@ -334,7 +334,7 @@ IO_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $s0
@@ -348,14 +348,9 @@ Int_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
- attr
-   _val
-   _prim_slot
-   no_expr
-	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -367,14 +362,9 @@ Bool_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
- attr
-   _val
-   _prim_slot
-   no_expr
-	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -386,19 +376,10 @@ String_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
- attr
-   _val
-   Int
-   no_expr
-	sw	$a0 12($s0)
- attr
-   _str_field
-   _prim_slot
-   no_expr
-	sw	$a0 16($s0)
+	sw	$a0 8($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -410,40 +391,18 @@ Main_init:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 4
+	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
- attr
-   var
-   String
-   string_const
-     hello
-
 	la	$a0 str_const1
-	sw	$a0 12($s0)
+	sw	$a0 8($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
 	jr	$ra	
- attr
-   var
-   String
-   string_const
-     hello
-
 	la	$a0 str_const1
- method
-   main
-   (nil)
-   IO
-   dispatch
-     new_
-       IO
-     out_string
-     object
-       var
 Main.main:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -451,6 +410,7 @@ Main.main:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
+	lw	$a0 8($s0)
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
 	la	$a0 IO_protObj

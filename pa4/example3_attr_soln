@@ -269,6 +269,7 @@ Parent_attrTab:
 Mom_attrTab:
 	.word	2
 	.word	2
+	.word	7
 Main_attrTab:
 String_attrTab:
 	.word	2
@@ -332,10 +333,11 @@ Parent_protObj:
 	.word	-1
 Mom_protObj:
 	.word	7
-	.word	5
+	.word	6
 	.word	Mom_dispTab
 	.word	int_const3
 	.word	int_const3
+	.word	0
 	.word	-1
 Main_protObj:
 	.word	5
@@ -496,7 +498,7 @@ IO_init:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	jr	$ra
+	jr	$ra	
 Main.main:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)

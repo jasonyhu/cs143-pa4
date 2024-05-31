@@ -1,5 +1,5 @@
 class Main {
-    main(): Int {
-        42 + 5
+    main(): IO {
+        (new IO).out_int(42 + 5)
     };
 };

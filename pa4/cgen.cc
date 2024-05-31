@@ -773,7 +773,7 @@ void CgenClassTable::code_inits() {
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
     for (attr_class* attrib : attribs) {
-      attrib->dump(cout, 1);
+      // attrib->dump(cout, 1);
       int id = nd->get_attr_ids().at(attrib->get_name());
       Environment env(nd);
       env.nds = nds;
@@ -1156,10 +1156,6 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
   stringtable.add_string(name->get_string());          // Add class name to string table
 }
 
-Environment::Environment(CgenNodeP so) : so(so) {
-  vars.enterscope();
-}
-
 //******************************************************************
 //
 //   Fill in the following methods to produce code for the
@@ -1212,7 +1208,7 @@ void assign_class::code(ostream &s, Environment env) {
   // expr is stored in ACC
 
   CgenNodeP cur_class_node; 
-  Symbol cur_class = env.so->get_name();
+  Symbol cur_class = env.get_so()->get_name();
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
@@ -1229,7 +1225,39 @@ void static_dispatch_class::code(ostream &s, Environment env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
   }
+
+  emit_push(ACC, s); // TODO: replace this bad line
+  // WHY DOES THIS WORK DDDD: -- JASON
+
   expr->code(s, env);
+
+  // dispatch on void
+  emit_bne(ACC, ZERO, label, s);
+  s << LA << ACC << " str_const0" << endl;
+  emit_load_imm(T1, line_number, s);
+  emit_jal("_dispatch_abort", s);
+
+  emit_label_def(label, s);
+  label++;
+
+  // get dispatch table for the statically dispatched class
+  CgenNodeP cur_class_node; 
+  for (CgenNodeP nd : env.nds) {
+      if (type_name == nd->get_name()) {
+        cur_class_node = nd;
+        break;
+      }
+  }
+
+  // load dispatch table
+  std::string disp_tab = type_name->get_string();
+  disp_tab.append(DISPTAB_SUFFIX);
+  emit_load_address(T1, disp_tab.c_str(), s);
+
+  // get method from dispatch table
+  int id = cur_class_node->get_method_ids().at(name);
+  emit_load(T1, id, T1, s);
+  emit_jalr(T1, s);
 }
 
 void dispatch_class::code(ostream &s, Environment env) {
@@ -1242,8 +1270,9 @@ void dispatch_class::code(ostream &s, Environment env) {
 
   // added to conform with code, also seems like it's necessary for BNE to work?
   // emit_load(ACC, 3, SELF, s);
-  emit_bne(ACC, ZERO, label, s);
 
+  // dispatch on void
+  emit_bne(ACC, ZERO, label, s);
   s << LA << ACC << " str_const0" << std::endl;
   emit_load_imm(T1, line_number, s);
   emit_jal("_dispatch_abort", s);
@@ -1251,7 +1280,7 @@ void dispatch_class::code(ostream &s, Environment env) {
   emit_label_def(label, s);
   label++;
 
-  Symbol cur_class = env.so->get_name();
+  Symbol cur_class = env.get_so()->get_name();
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
@@ -1272,24 +1301,32 @@ void dispatch_class::code(ostream &s, Environment env) {
 
 void cond_class::code(ostream &s, Environment env) {
   pred->code(s, env);
-
-  emit_load(T1, 3, ACC, s);
-  emit_beqz(T1, label, s);
+  emit_fetch_int(T1, ACC, s);
+  int else_label = label;
+  label++;
+  int then_label = label;
+  label++;
+  emit_beqz(T1, else_label, s);
   then_exp->code(s, env);
-  // TODO: THIS BRANCH SHOULD POINT TO THE LAST LABEL IN THE CONDITIONAL. BUT IDK HOW TO READ THE FUTURE WHEN ELSE_EXP CAN HAVE AS MANY LABELS....
-  emit_branch(label + 2, s);
-  emit_label_def(label, s);
-  label++;
+  emit_branch(then_label, s);
+  emit_label_def(else_label, s);
   else_exp->code(s, env);
-  emit_label_def(label, s);
-  label++;
-
-
+  emit_label_def(then_label, s);
 }
 
 void loop_class::code(ostream &s, Environment env) {
+  int start = label;
+  label++;
+  emit_label_def(label, s);
   pred->code(s, env);
+  emit_fetch_int(ACC, ACC, s);
+  int exit = label;
+  label++;
+  emit_beqz(ACC, exit, s);
   body->code(s, env);
+  emit_branch(start, s);
+  emit_label_def(exit, s);
+  emit_move(ACC, ZERO, s);
 }
 
 void typcase_class::code(ostream &s, Environment env) {
@@ -1301,8 +1338,7 @@ void typcase_class::code(ostream &s, Environment env) {
 
 void block_class::code(ostream &s, Environment env) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {
-    Expression exp = body->nth(i);
-    exp->code(s, env);
+    body->nth(i)->code(s, env);
   }
 }
 
@@ -1312,57 +1348,71 @@ void let_class::code(ostream &s, Environment env) {
 }
 
 void plus_class::code(ostream &s, Environment env) {
+  // e1->code(s, env);
+  // emit_fetch_int(ACC, ACC, s);
+  // emit_push(ACC, s);
+  // e2->code(s, env);
+  // emit_load(T1, 1, SP, s);
+  // emit_fetch_int(T1, T1, s);
+  // emit_fetch_int(T2, ACC, s);
+  // emit_add(T1, T1, T2, s);
+  // emit_store_int(T1, ACC, s);
+  // emit_addiu(SP, SP, 4, s);
+  // TODO: we need to create a new object.
   e1->code(s, env);
-  emit_fetch_int(ACC, ACC, s);
   emit_push(ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
+  emit_jal("Object.copy", s);
+  emit_addiu(SP, SP, 4, s);
+  emit_load(T1, 0, SP, s);
   emit_fetch_int(T1, T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_add(T1, T1, T2, s);
   emit_store_int(T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
-  // TODO: we need to create a new object.
 }
 
 void sub_class::code(ostream &s, Environment env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
+  emit_jal("Object.copy", s);
+  emit_addiu(SP, SP, 4, s);
+  emit_load(T1, 0, SP, s);
   emit_fetch_int(T1, T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_sub(T1, T1, T2, s);
   emit_store_int(T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void mul_class::code(ostream &s, Environment env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
+  emit_jal("Object.copy", s);
+  emit_addiu(SP, SP, 4, s);
+  emit_load(T1, 0, SP, s);
   emit_fetch_int(T1, T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_mul(T1, T1, T2, s);
   emit_store_int(T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void divide_class::code(ostream &s, Environment env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
+  emit_jal("Object.copy", s);
+  emit_addiu(SP, SP, 4, s);
+  emit_load(T1, 0, SP, s);
   emit_fetch_int(T1, T1, s);
   emit_fetch_int(T2, ACC, s);
   emit_div(T1, T1, T2, s);
   emit_store_int(T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void neg_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_jal("Object.copy", s);
   emit_fetch_int(T1, ACC, s);
   emit_neg(T1, T1, s);
   emit_store_int(T1, ACC, s);
@@ -1378,9 +1428,9 @@ void lt_class::code(ostream &s, Environment env) {
 
   emit_load_bool(ACC, truebool, s);
   emit_blt(T1, T2, label, s);
+  emit_load_bool(ACC, falsebool, s);
   emit_label_def(label, s);
   label++;
-  emit_load_bool(ACC, falsebool, s);
 
   emit_addiu(SP, SP, 4, s);
 }
@@ -1392,14 +1442,21 @@ void eq_class::code(ostream &s, Environment env) {
   emit_load(T1, 1, SP, s);
   emit_move(T2, ACC, s);
 
+  if (e1->type == Int || e1->type == Str || e1->type == Bool) {
+    if (e2->type == Int || e2->type == Str || e2->type == Bool) {
+      emit_load_bool(ACC, truebool, s);
+      emit_load_bool(A1, falsebool, s);
+      emit_jal("equality_test", s);
+    }
+  }
+
   emit_load_bool(ACC, truebool, s);
   emit_beq(T1, T2, label, s);
+  emit_load_bool(ACC, falsebool, s);
   emit_label_def(label, s);
   label++;
-  emit_load_bool(ACC, falsebool, s);
 
   emit_addiu(SP, SP, 4, s);
-  emit_jal("equality_test", s);
 }
 
 void leq_class::code(ostream &s, Environment env) {
@@ -1412,9 +1469,9 @@ void leq_class::code(ostream &s, Environment env) {
 
   emit_load_bool(ACC, truebool, s);
   emit_bleq(T1, T2, label, s);
+  emit_load_bool(ACC, falsebool, s);
   emit_label_def(label, s);
   label++;
-  emit_load_bool(ACC, falsebool, s);
   
   emit_addiu(SP, SP, 4, s);
 }
@@ -1424,9 +1481,9 @@ void comp_class::code(ostream &s, Environment env) {
   emit_load(T1, 3, ACC, s);
   emit_load_bool(ACC, truebool, s);
   emit_beqz(T1, label, s);
+  emit_load_bool(ACC, falsebool, s);
   emit_label_def(label, s);
   label++;
-  emit_load_bool(ACC, falsebool, s);
 }
 
 void int_const_class::code(ostream& s, Environment env)
@@ -1487,16 +1544,22 @@ void new__class::code(ostream &s, Environment env) {
 
 void isvoid_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_move(T1, ACC, s);
+  emit_load_bool(ACC, truebool, s);
+  emit_beqz(T1, label, s);
+  emit_load_bool(ACC, falsebool, s);
+  emit_label_def(label, s);
+  label++;
 }
 
 void no_expr_class::code(ostream &s, Environment env) {
-  // emit_move(ACC, ZERO, s);
+  emit_move(ACC, ZERO, s);
 }
 
 void object_class::code(ostream &s, Environment env) {
   // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
-  Symbol cur_class = env.so->get_name();
+  Symbol cur_class = env.get_so()->get_name();
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
