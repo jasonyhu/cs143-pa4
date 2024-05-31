@@ -994,65 +994,6 @@ CgenNodeP CgenNode::get_parentnd()
   return parentnd;
 }
 
-// void method_class::disPrint(Symbol parent, ostream& str) {
-//   str << WORD << parent->get_string() << "." << name->get_string() << std::endl;
-// }
-
-// // deprecated
-// void attr_class::disPrint(Symbol parent, ostream& str) {
-//   return;
-// }
-
-// // unused
-// void method_class::attrPrint(Symbol parent, ostream& str) {
-//   return;
-// }
-
-// // unused
-// void attr_class::attrPrint(Symbol parent, ostream& str) {
-//   // TODO: what is the difference between Int and void?
-//   if (name == Int) {
-//     str << WORD << 0 << std::endl;
-//   } else if (name == Bool) {
-//     str << WORD << "false" << std::endl;
-//   } else if (name == Str) {
-//     str << WORD << "" << std::endl;
-//   } else {
-//     str << WORD << 0 << std::endl;
-//   }
-// }
-
-// void CgenNode::disp_traversal(ostream& str) {
-//   if (get_parentnd() != NULL) {
-//     get_parentnd()->disp_traversal(str);
-//   }
-//   for (int i = features->first(); features->more(i); i = features->next(i)) {
-//     Feature f = features->nth(i);
-//     if (f->is_method()) {
-//       f->disPrint(name, str);
-//     }
-//   }
-// }
-
-// void CgenNode::attr_traversal(ostream& str) {
-//   if (get_parentnd() != NULL) {
-//     get_parentnd()->attr_traversal(str);
-//   }
-//   if (name == Int) {
-//     str << WORD << 0 << std::endl;
-//   } else if (name == Bool) {
-//     str << WORD << 0 << std::endl;
-//   // TODO: what do i even do with string
-//   } else if (name == Str) {
-//     str << WORD << 0 << std::endl;
-//     str << WORD << "" << std::endl;
-//   } else {
-//     for (int i = features->first(); features->more(i); i = features->next(i)) {
-//       features->nth(i)->attrPrint(name, str);
-//     }
-//   }
-// }
-
 void CgenClassTable::code()
 {
     if (cgen_debug) std::cerr << "coding global data" << std::endl;
@@ -1063,20 +1004,6 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding constants" << std::endl;
     code_constants();
-
-    //                 Add your code to emit
-    //                   - prototype objects
-    //                   - class_nameTab
-    //                   - dispatch tables
-    //
-
-    /*
-    For each table, you should insert a label for the table (which matches the label expected by the runtime.) A label is a location 
-    in the program code. In other parts of the program, you can use the label as you would a constant value, and the assembler/linker 
-    will insert the actual address that code was loaded into memory. The runtime can also use these labels if you declare them to be .globl 
-    (see code_global_data for some example.)
-    */
-   // TODO: incomplete
 
     if (cgen_debug) std::cerr << "coding class name table" << std::endl;
     code_class_name_table();
@@ -1095,22 +1022,7 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
     code_inits();
-    //                 Add your code to emit
-    //                   - object initializer
-    //                   - the class methods
-    //                   - etc...
 
-
-     // set up the recursive code generation
-  /* In your code() method, recurse over each class.
-
-  For each class, emit code to generate the init function. (Also, you should generate the methods, but for simplicity we'll focus on the attributes.)
-
-  The init function generates code to initialize each attribute using its initializer.
-
-  If the attribute's initializer is an integer constant, it will call int_const_class::code.
-  */
-  // TODO: add more passes depending on what we need
   for (CgenNodeP nd : nds) {
     Symbol name = nd->get_name();
     if (name == Object || name == Str || name == IO || name == Bool || name == Int) {
@@ -1173,7 +1085,6 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_store(FP, 3, SP, s);
   emit_store(SELF, 2, SP, s);
   emit_store(RA, 1, SP ,s);
-  // ALEX: changed offset from 4 to 16 to conform to test code
   emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
   Environment env(nd);
@@ -1184,7 +1095,6 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
     arg_count++;
   }
   expr->code(s, env);
-  // TODO: for dispatch calls, move here in conditions
   emit_load(FP, 3, SP, s);
   emit_load(SELF, 2, SP, s);
   emit_load(RA, 1, SP, s);
@@ -1442,8 +1352,8 @@ void eq_class::code(ostream &s, Environment env) {
   emit_load(T1, 1, SP, s);
   emit_move(T2, ACC, s);
 
-  if (e1->type == Int || e1->type == Str || e1->type == Bool) {
-    if (e2->type == Int || e2->type == Str || e2->type == Bool) {
+  if (e1->get_type() == Int || e1->->get_type() == Str || e1->->get_type() == Bool) {
+    if (e2->->get_type() == Int || e2->->get_type() == Str || e2->->get_type() == Bool) {
       emit_load_bool(ACC, truebool, s);
       emit_load_bool(A1, falsebool, s);
       emit_jal("equality_test", s);
