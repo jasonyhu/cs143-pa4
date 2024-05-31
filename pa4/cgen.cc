@@ -525,6 +525,10 @@ void CgenClassTable::code_global_data()
   str << GLOBAL << BOOLTAG << std::endl;
   str << GLOBAL << STRINGTAG << std::endl;
   str << GLOBAL << CLASSOBJTAB << std::endl;
+  for (CgenNodeP nd : nds) {
+    str << GLOBAL << nd->get_name() << PROTOBJ_SUFFIX << std::endl;
+    str << GLOBAL << nd->get_name() << "_init" << std::endl;
+  }
 
   //
   // We also need to know the tag of the Int, String, and Bool classes
@@ -622,6 +626,7 @@ void CgenClassTable::code_constants()
 
 void CgenClassTable::code_class_name_table() {
   str << CLASSNAMETAB << LABEL;
+  nds.reverse();
   for (CgenNodeP nd : nds) {
     Symbol class_ = nd->get_name();
     StringEntryP str_entry = stringtable.lookup_string(class_->get_string());
@@ -642,17 +647,17 @@ void CgenClassTable::code_class_obj_table() {
 
 std::map<Symbol, Symbol> CgenNode::get_all_methods() {
   if (all_methods.empty()) {
-    std::vector<CgenNode*> parents;
+    std::list<CgenNode*> parents;
     CgenNode* cn = this;
     while (cn->name != No_class) {
       parents.push_back(cn);
       cn = cn->get_parentnd();
     }
-    std::reverse(parents.begin(), parents.end());
+    parents.reverse();
     for (CgenNode* nd : parents) {
       Features parent_features = nd->features;
-      for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
-        Feature f = parent_features->nth(j);
+      for (int i = parent_features->first(); parent_features->more(i); i = parent_features->next(i)) {
+        Feature f = parent_features->nth(i);
         if (f->is_method()) {
           all_methods[((method_class*)f)->get_name()] = nd->get_name();
         }
@@ -688,25 +693,32 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
       cn = cn->get_parentnd();
     }
     std::reverse(parents.begin(), parents.end());
-    for (size_t i = 0; i < parents.size(); i++) {
-      Features parent_features = parents[i]->features;
-      for (int j = parent_features->first(); parent_features->more(j); j = parent_features->next(j)) {
-        Feature f = parent_features->nth(j);
+    for (CgenNode* parent : parents) {
+      Features parent_features = parent->features;
+      for (int i = parent_features->first(); parent_features->more(i); i = parent_features->next(i)) {
+        Feature f = parent_features->nth(i);
         if (!f->is_method()) {
           all_attrs.push_back((attr_class*)f);
         }
-        attr_ids[((attr_class*)f)->get_name()] = i;
       }
     }
+    for (size_t i = 0; i < all_attrs.size(); i++) {
+      method_ids[all_attrs[i]->get_name()] = i;
+      i++;
+    }
   }
+  cout << endl << endl << "printing attribs:";
+  for(attr_class* attrib : all_attrs) {
+    attrib->dump(cout, 1);
+  }
+  cout << endl << endl;
   return all_attrs;
 }
 
 void CgenClassTable::code_prot_objs() {
   for (CgenNodeP nd : nds) {
     std::vector<attr_class*> attribs = nd->get_all_attrs();
-    // garbage collector tag
-    str << WORD << -1 << std::endl;
+    str << WORD << -1 << std::endl;   // garbage collector tag
     Symbol class_ = nd->get_name();
     emit_protobj_ref(class_, str);
     str << LABEL;
@@ -1237,7 +1249,6 @@ void dispatch_class::code(ostream &s, Environment env) {
   }
   // seg faults here
   CgenNodeP cur_class_node; 
-  // codegen_classtable->get_class_node(cur_class);
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
