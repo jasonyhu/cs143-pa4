@@ -1241,7 +1241,9 @@ void dispatch_class::code(ostream &s, Environment env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
+  // seg faults here
   CgenNodeP cur_class_node; 
+  // codegen_classtable->get_class_node(cur_class);
   for (CgenNodeP nd : env.nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
@@ -1249,8 +1251,8 @@ void dispatch_class::code(ostream &s, Environment env) {
       }
   }
   emit_load(T1, 2, ACC, s);
-  // int id = cur_class_node->get_method_ids().at(name);
-  emit_load(T1, 3, T1, s); // bad magic number
+  int id = cur_class_node->get_method_ids().at(name);
+  emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
 

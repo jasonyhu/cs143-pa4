@@ -421,7 +421,7 @@ Main.main:
 	jal	_dispatch_abort
 label0:
 	lw	$t1 8($a0)
-	lw	$t1 12($t1)
+	lw	$t1 0($t1)
 	jalr		$t1
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
