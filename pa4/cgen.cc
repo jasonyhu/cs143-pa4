@@ -736,7 +736,7 @@ void CgenClassTable::code_prot_objs() {
           str << endl;
         } else if (type == Str) {
           str << WORD;
-          stringtable.lookup_string("0")->code_ref(str);
+          stringtable.lookup_string("")->code_ref(str);
           str << endl;
         } else if (type == Bool) {
           str << WORD;
@@ -757,7 +757,6 @@ void CgenClassTable::code_inits() {
     emit_store(FP, 3, SP, str);
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
-    // ALEX: chanaged this to 16 to conform to reference
     emit_addiu(FP, SP, 4, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
@@ -769,21 +768,16 @@ void CgenClassTable::code_inits() {
     std::vector<attr_class*> attribs = nd->get_all_attrs();
     for (attr_class* attrib : attribs) {
       int id = nd->get_attr_ids().at(attrib->get_name());
-      if (attrib->get_init()->is_empty()) {
-        if (attrib->get_type() == Str) {
-          emit_load_string(ACC, stringtable.lookup_string(""), str);
-          emit_store(ACC, id + 3, SELF, str);
-        } else if (attrib->get_type() == Int) {
-          emit_load_int(ACC, inttable.lookup_string("0"), str);
-          emit_store(ACC, id + 3, SELF, str);
-        } else if (attrib->get_type() == Bool) {
-          emit_load_bool(ACC, BoolConst(0), str);
-          emit_store(ACC, id + 3, SELF, str);
-        }
-      } else {
-        Environment env(nd);
-        env.nds = nds;
-        attrib->get_init()->code(str, env);
+      Environment env(nd);
+      env.nds = nds;
+      // ALEX: modified, see github for more info
+      attrib->get_init()->code(str, env);
+      if (attrib->get_type() == Str) {
+        emit_store(ACC, id + 2, SELF, str);
+      } else if (attrib->get_type() == Int) {
+        emit_store(ACC, id + 2, SELF, str);
+      } else if (attrib->get_type() == Bool) {
+        emit_store(ACC, id + 2, SELF, str);
       }
     }
     emit_move(ACC, SELF, str);
@@ -1225,7 +1219,7 @@ void dispatch_class::code(ostream &s, Environment env) {
   expr->code(s, env);
 
   // added to conform with code, also seems like it's necessary for BNE to work?
-  emit_load(ACC, 3, SELF, s);
+  // emit_load(ACC, 3, SELF, s);
   emit_bne(ACC, ZERO, label, s);
 
   s << LA << ACC << " str_const0" << std::endl;
@@ -1289,7 +1283,10 @@ void plus_class::code(ostream &s, Environment env) {
   emit_push(ACC, s);
   e2->code(s, env);
   emit_load(T1, 1, SP, s);
-  emit_add(ACC, T1, ACC, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
+  emit_add(T1, T1, T2, s);
+  emit_store_int(T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
 }
 
@@ -1298,7 +1295,10 @@ void sub_class::code(ostream &s, Environment env) {
   emit_push(ACC, s);
   e2->code(s, env);
   emit_load(T1, 1, SP, s);
-  emit_sub(ACC, T1, ACC, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
+  emit_sub(T1, T1, T2, s);
+  emit_store_int(T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
 }
 
@@ -1307,28 +1307,36 @@ void mul_class::code(ostream &s, Environment env) {
   emit_push(ACC, s);
   e2->code(s, env);
   emit_load(T1, 1, SP, s);
-  emit_mul(ACC, T1, ACC, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
+  emit_mul(T1, T1, T2, s);
+  emit_store_int(T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
 }
 
 void divide_class::code(ostream &s, Environment env) {
-  // TODO: divide by 0 error?
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
   emit_load(T1, 1, SP, s);
-  emit_div(ACC, T1, ACC, s);
+  emit_fetch_int(T1, T1, s);
+  emit_fetch_int(T2, ACC, s);
+  emit_div(T1, T1, T2, s);
+  emit_store_int(T1, ACC, s);
   emit_addiu(SP, SP, 4, s);
 }
 
 void neg_class::code(ostream &s, Environment env) {
   e1->code(s, env);
-  // emit_neg()
+  emit_fetch_int(T1, ACC, s);
+  emit_neg(T1, T1, s);
+  emit_store_int(T1, ACC, s);
 }
 
 void lt_class::code(ostream &s, Environment env) {
   e1->code(s, env);
   e2->code(s, env);
+
 }
 
 void eq_class::code(ostream &s, Environment env) {
@@ -1342,6 +1350,7 @@ void leq_class::code(ostream &s, Environment env) {
 }
 
 void comp_class::code(ostream &s, Environment env) {
+  // is this not?
   e1->code(s, env);
 }
 
@@ -1373,7 +1382,6 @@ void new__class::code(ostream &s, Environment env) {
     // TODO: revisit with more classes
     // TODO: add self to the class_to_tag_table lookup table
     // class_to_tag_table.lookup(self);
-    // TODO: what the hell is s1
     // TODO: i just transcribed the results so this definitely needs a second check
     emit_store("$s1", 1, FP, s);
     emit_load_address(T1, "class_objTab", s);
@@ -1410,6 +1418,16 @@ void no_expr_class::code(ostream &s, Environment env) {
 }
 
 void object_class::code(ostream &s, Environment env) {
-  int idx;
+  CgenNodeP cur_class_node; 
+  // codegen_classtable->get_class_node(cur_class);
+  Symbol cur_class = env.so->get_name();
+  for (CgenNodeP nd : env.nds) {
+      if (cur_class == nd->get_name()) {
+        cur_class_node = nd;
+        break;
+      }
+  }
+  int id = cur_class_node->get_attr_ids().at(name);
+  emit_load(ACC, id + 2, SELF, s);
 }
 
