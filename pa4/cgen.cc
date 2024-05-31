@@ -1166,6 +1166,7 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
+// TODO
 void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
@@ -1180,7 +1181,7 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   env.nds = nds;
   int arg_count = 0;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
+    // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
     arg_count++;
   }
   expr->code(s, env);
@@ -1205,6 +1206,7 @@ void branch_class::code(ostream &s, Environment env) {
   expr->code(s, env);
 }
 
+// TODO
 void assign_class::code(ostream &s, Environment env) {
   expr->code(s, env);
   // expr is stored in ACC
@@ -1329,6 +1331,7 @@ void loop_class::code(ostream &s, Environment env) {
   emit_move(ACC, ZERO, s);
 }
 
+// TODO
 void typcase_class::code(ostream &s, Environment env) {
   expr->code(s, env);
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
@@ -1342,6 +1345,7 @@ void block_class::code(ostream &s, Environment env) {
   }
 }
 
+// TODO
 void let_class::code(ostream &s, Environment env) {
   init->code(s, env);
   body->code(s, env);
@@ -1504,6 +1508,7 @@ void bool_const_class::code(ostream& s, Environment env)
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
+// TODO
 void new__class::code(ostream &s, Environment env) {
   // might be different for basic classes
   // TODO: refactor this into other JAL emits
@@ -1556,6 +1561,7 @@ void no_expr_class::code(ostream &s, Environment env) {
   emit_move(ACC, ZERO, s);
 }
 
+// TODO
 void object_class::code(ostream &s, Environment env) {
   // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
