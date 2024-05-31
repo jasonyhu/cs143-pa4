@@ -696,6 +696,7 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
     for (CgenNode* parent : parents) {
       Features parent_features = parent->features;
       for (int i = parent_features->first(); parent_features->more(i); i = parent_features->next(i)) {
+        // todo: make a separate pass to gather the let variables for later AR allocation
         Feature f = parent_features->nth(i);
         if (!f->is_method()) {
           all_attrs.push_back((attr_class*)f);
@@ -755,7 +756,9 @@ void CgenClassTable::code_prot_objs() {
   }
 }
 
-void CgenClassTable::code_inits() {
+Environment CgenClassTable::code_inits() {
+  Environment env(nds);
+  env.enterscope();
   for (CgenNode* nd : nds) {
     str << nd->get_name() << CLASSINIT_SUFFIX << LABEL;
     emit_addiu(SP, SP, -12, str);
@@ -772,13 +775,14 @@ void CgenClassTable::code_inits() {
       str << std::endl;
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
+    
     for (attr_class* attrib : attribs) {
       // attrib->dump(cout, 1);
       int id = nd->get_attr_ids().at(attrib->get_name());
-      Environment env(nd);
-      env.nds = nds;
       // ALEX: modified, see github for more info
-      attrib->get_init()->code(str, env);
+      std::pair<std::string, int> value = std::make_pair("attr", id);
+      env.addid(attrib->get_name(), &value);
+      attrib->get_init()->code(str, &env);
       if (attrib->get_type() == Str) {
         emit_store(ACC, id + 2, SELF, str);
       } else if (attrib->get_type() == Int) {
@@ -794,6 +798,7 @@ void CgenClassTable::code_inits() {
     emit_addiu(SP, SP, 12, str);
     emit_return(str);
   }
+  return env;
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
@@ -1021,7 +1026,7 @@ void CgenClassTable::code()
     code_global_text();
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
-    code_inits();
+    Environment env = code_inits();
 
   for (CgenNodeP nd : nds) {
     Symbol name = nd->get_name();
@@ -1031,7 +1036,7 @@ void CgenClassTable::code()
     Symbol class_ = nd->get_name();
     Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
-      features->nth(j)->code(str, nd, nds);
+      features->nth(j)->code(str, nd, &env);
     }
   }
 
@@ -1079,7 +1084,7 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //*****************************************************************
 
 // TODO
-void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
+void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
   emit_addiu(SP, SP, -12, s);
@@ -1088,8 +1093,6 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_store(RA, 1, SP ,s);
   emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
-  Environment env(nd);
-  env.nds = nds;
   int arg_count = 0;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
@@ -1105,25 +1108,23 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
 }
 
 // TODO
-void attr_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
-  Environment env(nd);
-  env.nds = nds;
+void attr_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   init->code(s, env);
 }
 
 // TODO
-void branch_class::code(ostream &s, Environment env) {
+void branch_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
 }
 
 // TODO
-void assign_class::code(ostream &s, Environment env) {
+void assign_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   // expr is stored in ACC
 
   CgenNodeP cur_class_node; 
-  Symbol cur_class = env.get_so()->get_name();
-  for (CgenNodeP nd : env.nds) {
+  Symbol cur_class = env->get_so()->get_name();
+  for (CgenNodeP nd : env->nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
         break;
@@ -1135,7 +1136,7 @@ void assign_class::code(ostream &s, Environment env) {
   emit_store(ACC, id + 2, SELF, s);
 }
 
-void static_dispatch_class::code(ostream &s, Environment env) {
+void static_dispatch_class::code(ostream &s, Environment* env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     emit_push(ACC, s);
@@ -1151,10 +1152,11 @@ void static_dispatch_class::code(ostream &s, Environment env) {
 
   emit_label_def(label, s);
   label++;
+  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
 
   // get dispatch table for the statically dispatched class
   CgenNodeP cur_class_node; 
-  for (CgenNodeP nd : env.nds) {
+  for (CgenNodeP nd : env->nds) {
       if (type_name == nd->get_name()) {
         cur_class_node = nd;
         break;
@@ -1172,7 +1174,7 @@ void static_dispatch_class::code(ostream &s, Environment env) {
   emit_jalr(T1, s);
 }
 
-void dispatch_class::code(ostream &s, Environment env) {
+void dispatch_class::code(ostream &s, Environment* env) {
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     emit_push(ACC, s);
@@ -1192,14 +1194,16 @@ void dispatch_class::code(ostream &s, Environment env) {
   emit_label_def(label, s);
   label++;
 
-  Symbol cur_class = env.get_so()->get_name();
+  Symbol cur_class = env->get_so()->get_name();
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
+  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
+
   // seg faults here
   CgenNodeP cur_class_node; 
   // codegen_classtable->get_class_node(cur_class);
-  for (CgenNodeP nd : env.nds) {
+  for (CgenNodeP nd : env->nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
         break;
@@ -1211,7 +1215,7 @@ void dispatch_class::code(ostream &s, Environment env) {
   emit_jalr(T1, s);
 }
 
-void cond_class::code(ostream &s, Environment env) {
+void cond_class::code(ostream &s, Environment* env) {
   pred->code(s, env);
   emit_fetch_int(T1, ACC, s);
   int else_label = label;
@@ -1226,7 +1230,7 @@ void cond_class::code(ostream &s, Environment env) {
   emit_label_def(then_label, s);
 }
 
-void loop_class::code(ostream &s, Environment env) {
+void loop_class::code(ostream &s, Environment* env) {
   int start = label;
   label++;
   emit_label_def(label, s);
@@ -1242,26 +1246,29 @@ void loop_class::code(ostream &s, Environment env) {
 }
 
 // TODO
-void typcase_class::code(ostream &s, Environment env) {
+void typcase_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
     cases->nth(i)->code(s, env);
   }
 }
 
-void block_class::code(ostream &s, Environment env) {
+void block_class::code(ostream &s, Environment* env) {
   for (int i = body->first(); body->more(i); i = body->next(i)) {
     body->nth(i)->code(s, env);
   }
 }
 
 // TODO
-void let_class::code(ostream &s, Environment env) {
+void let_class::code(ostream &s, Environment* env) {
   init->code(s, env);
   body->code(s, env);
+  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
+  env->enterscope();
+
 }
 
-void plus_class::code(ostream &s, Environment env) {
+void plus_class::code(ostream &s, Environment* env) {
   // e1->code(s, env);
   // emit_fetch_int(ACC, ACC, s);
   // emit_push(ACC, s);
@@ -1285,7 +1292,7 @@ void plus_class::code(ostream &s, Environment env) {
   emit_store_int(T1, ACC, s);
 }
 
-void sub_class::code(ostream &s, Environment env) {
+void sub_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1298,7 +1305,7 @@ void sub_class::code(ostream &s, Environment env) {
   emit_store_int(T1, ACC, s);
 }
 
-void mul_class::code(ostream &s, Environment env) {
+void mul_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1311,7 +1318,7 @@ void mul_class::code(ostream &s, Environment env) {
   emit_store_int(T1, ACC, s);
 }
 
-void divide_class::code(ostream &s, Environment env) {
+void divide_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1324,7 +1331,7 @@ void divide_class::code(ostream &s, Environment env) {
   emit_store_int(T1, ACC, s);
 }
 
-void neg_class::code(ostream &s, Environment env) {
+void neg_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_jal("Object.copy", s);
   emit_fetch_int(T1, ACC, s);
@@ -1332,7 +1339,7 @@ void neg_class::code(ostream &s, Environment env) {
   emit_store_int(T1, ACC, s);
 }
 
-void lt_class::code(ostream &s, Environment env) {
+void lt_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1349,15 +1356,15 @@ void lt_class::code(ostream &s, Environment env) {
   emit_addiu(SP, SP, 4, s);
 }
 
-void eq_class::code(ostream &s, Environment env) {
+void eq_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
   emit_load(T1, 1, SP, s);
   emit_move(T2, ACC, s);
 
-  if (e1->get_type() == Int || e1->->get_type() == Str || e1->->get_type() == Bool) {
-    if (e2->->get_type() == Int || e2->->get_type() == Str || e2->->get_type() == Bool) {
+  if (e1->get_type() == Int || e1->get_type() == Str || e1->get_type() == Bool) {
+    if (e2->get_type() == Int || e2->get_type() == Str || e2->get_type() == Bool) {
       emit_load_bool(ACC, truebool, s);
       emit_load_bool(A1, falsebool, s);
       emit_jal("equality_test", s);
@@ -1373,7 +1380,7 @@ void eq_class::code(ostream &s, Environment env) {
   emit_addiu(SP, SP, 4, s);
 }
 
-void leq_class::code(ostream &s, Environment env) {
+void leq_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1390,7 +1397,7 @@ void leq_class::code(ostream &s, Environment env) {
   emit_addiu(SP, SP, 4, s);
 }
 
-void comp_class::code(ostream &s, Environment env) {
+void comp_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_load(T1, 3, ACC, s);
   emit_load_bool(ACC, truebool, s);
@@ -1400,7 +1407,7 @@ void comp_class::code(ostream &s, Environment env) {
   label++;
 }
 
-void int_const_class::code(ostream& s, Environment env)
+void int_const_class::code(ostream& s, Environment* env)
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1408,18 +1415,18 @@ void int_const_class::code(ostream& s, Environment env)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s, Environment env)
+void string_const_class::code(ostream& s, Environment* env)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s, Environment env)
+void bool_const_class::code(ostream& s, Environment* env)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
 // TODO
-void new__class::code(ostream &s, Environment env) {
+void new__class::code(ostream &s, Environment* env) {
   // might be different for basic classes
   // TODO: refactor this into other JAL emits
   if (type_name == SELF_TYPE) {
@@ -1457,7 +1464,7 @@ void new__class::code(ostream &s, Environment env) {
 
 }
 
-void isvoid_class::code(ostream &s, Environment env) {
+void isvoid_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
   emit_move(T1, ACC, s);
   emit_load_bool(ACC, truebool, s);
@@ -1467,16 +1474,16 @@ void isvoid_class::code(ostream &s, Environment env) {
   label++;
 }
 
-void no_expr_class::code(ostream &s, Environment env) {
+void no_expr_class::code(ostream &s, Environment* env) {
   emit_move(ACC, ZERO, s);
 }
 
 // TODO
-void object_class::code(ostream &s, Environment env) {
+void object_class::code(ostream &s, Environment* env) {
   // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
-  Symbol cur_class = env.get_so()->get_name();
-  for (CgenNodeP nd : env.nds) {
+  Symbol cur_class = env->get_so()->get_name();
+  for (CgenNodeP nd : env->nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;
         break;

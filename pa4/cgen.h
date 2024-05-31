@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include <map>
 #include "cool-tree.h"
 #include "emit.h"
@@ -38,7 +39,7 @@ private:
   void code_class_obj_table();
   void code_disp_tables();
   void code_prot_objs();
-  void code_inits();
+  Environment code_inits();
 
   // The following creates an inheritance graph from a list of classes. The
   // graph is implemented as a tree of `CgenNode', and class names are placed
@@ -94,27 +95,37 @@ class BoolConst {
   void code_ref(std::ostream&) const;
 };
 
-class Environment {
-  public:
-    Environment(CgenNodeP so) : so(so) {};
-    std::list<CgenNodeP> nds;
-    int lookup_param(Symbol name);
-    int lookup_attr(Symbol name) {
-      std::map<Symbol, int> attr_ids = so->get_attr_ids();
-      return attr_ids.at(name);
-    };
-    int lookup_var(Symbol name);
-    int add_let(Symbol name) {
-      let_vars.push_back(name);
-      return let_vars.size() - 1;
-    }
-    int add_param(Symbol name) {
-      params.push_back(name);
-      return params.size() - 1;
-    }
-    CgenNodeP get_so() const { return so; }
-  private:
-    CgenNodeP so;
-    std::vector<Symbol> let_vars;
-    std::vector<Symbol> params;
+// class Environment {
+//   public:
+//     Environment(CgenNodeP so) : so(so) {};
+//     std::list<CgenNodeP> nds;
+//     int lookup_param(Symbol name);
+//     int lookup_attr(Symbol name) {
+//       std::map<Symbol, int> attr_ids = so->get_attr_ids();
+//       return attr_ids.at(name);
+//     };
+//     int lookup_var(Symbol name);
+//     int add_let(Symbol name) {
+//       let_vars.push_back(name);
+//       return let_vars.size() - 1;
+//     }
+//     int add_param(Symbol name) {
+//       params.push_back(name);
+//       return params.size() - 1;
+//     }
+//     CgenNodeP get_so() const { return so; }
+//   private:
+//     CgenNodeP so;
+//     std::vector<Symbol> let_vars;
+//     std::vector<Symbol> params;
+// };
+
+// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", and "param" to standardize
+class Environment : public SymbolTable<Symbol, std::pair<std::string, int>> {
+private:
+  CgenNodeP so;
+public:
+  Environment(std::list<CgenNodeP> param) { nds = param; };
+  std::list<CgenNodeP> nds;
+  CgenNodeP get_so() { return so; };
 };
