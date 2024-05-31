@@ -706,11 +706,6 @@ std::vector<attr_class*> CgenNode::get_all_attrs() {
       attr_ids[all_attrs[i]->get_name()] = i;
     }
   }
-  // cout << endl << endl << "printing attribs:" << endl;
-  // for(attr_class* attrib : all_attrs) {
-  //   attrib->dump(cout, 1);
-  // }
-  // cout << endl << endl;
   return all_attrs;
 }
 
