@@ -1288,44 +1288,32 @@ void let_class::code(ostream &s, Environment env) {
 
 void plus_class::code(ostream &s, Environment env) {
   e1->code(s, env);
+  emit_fetch_int(ACC, ACC, s);
   emit_push(ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
-  emit_add(ACC, T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
+  emit_fetch_int(T1, ACC, s);
+  emit_push(T1, s);
+  emit_jal("Object.copy", s);
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  emit_load(T2, 0, SP, s);
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  emit_load(T1, 0, SP, s);
+  emit_add(T1, T1, T2, s);
+  emit_store_int(T1, ACC, s);
 }
 
 void sub_class::code(ostream &s, Environment env) {
-  e1->code(s, env);
-  emit_push(ACC, s);
-  e2->code(s, env);
-  emit_load(T1, 1, SP, s);
-  emit_sub(ACC, T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void mul_class::code(ostream &s, Environment env) {
-  e1->code(s, env);
-  emit_push(ACC, s);
-  e2->code(s, env);
-  emit_load(T1, 1, SP, s);
-  emit_mul(ACC, T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void divide_class::code(ostream &s, Environment env) {
-  // TODO: divide by 0 error?
-  e1->code(s, env);
-  emit_push(ACC, s);
-  e2->code(s, env);
-  emit_load(T1, 1, SP, s);
-  emit_div(ACC, T1, ACC, s);
-  emit_addiu(SP, SP, 4, s);
 }
 
 void neg_class::code(ostream &s, Environment env) {
   e1->code(s, env);
-  // emit_neg()
+  emit_neg(ACC, ACC, s);
 }
 
 void lt_class::code(ostream &s, Environment env) {
