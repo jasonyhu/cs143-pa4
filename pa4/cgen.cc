@@ -758,7 +758,7 @@ void CgenClassTable::code_inits() {
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
     // ALEX: chanaged this to 16 to conform to reference
-    emit_addiu(FP, SP, 16, str);
+    emit_addiu(FP, SP, 4, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
     if (parent != No_class) {
@@ -1177,7 +1177,7 @@ void method_class::code(ostream &s, CgenNodeP nd, std::list<CgenNodeP> nds) {
   emit_store(SELF, 2, SP, s);
   emit_store(RA, 1, SP ,s);
   // ALEX: changed offset from 4 to 16 to conform to test code
-  emit_addiu(FP, SP, 16, s);
+  emit_addiu(FP, SP, 4, s);
   emit_move(SELF, ACC, s);
   Environment env(nd);
   env.nds = nds;
@@ -1224,7 +1224,10 @@ void dispatch_class::code(ostream &s, Environment env) {
 
   expr->code(s, env);
 
+  // added to conform with code, also seems like it's necessary for BNE to work?
+  emit_load(ACC, 3, SELF, s);
   emit_bne(ACC, ZERO, label, s);
+
   s << LA << ACC << " str_const0" << std::endl;
   emit_load_imm(T1, line_number, s);
   emit_jal("_dispatch_abort", s);
