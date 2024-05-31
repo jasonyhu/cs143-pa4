@@ -96,12 +96,22 @@ class BoolConst {
 
 class Environment {
   public:
-    Environment(CgenNodeP so) : so(so) { vars.enterscope(); };
-    SymbolTable<Symbol, Entry> vars;
+    Environment(CgenNodeP so) : so(so) {};
     std::list<CgenNodeP> nds;
     int lookup_param(Symbol name);
-    int lookup_attr(Symbol name);
+    int lookup_attr(Symbol name) {
+      std::map<Symbol, int> attr_ids = so->get_attr_ids();
+      return attr_ids.at(name);
+    };
     int lookup_var(Symbol name);
+    int add_let(Symbol name) {
+      let_vars.push_back(name);
+      return let_vars.size() - 1;
+    }
+    int add_param(Symbol name) {
+      params.push_back(name);
+      return params.size() - 1;
+    }
     CgenNodeP get_so() const { return so; }
   private:
     CgenNodeP so;
