@@ -26,7 +26,6 @@
 #include "handle_flags.h"
 
 int label = 0;
-CgenClassTable *codegen_classtable;
 
 //
 // Two symbols from the semantic analyzer (semant.cc) are used.
@@ -133,7 +132,7 @@ BoolConst truebool(TRUE);
 //*********************************************************
 void program_class::cgen(ostream &os) {
    initialize_constants();
-   codegen_classtable = new CgenClassTable(classes,os);
+   CgenClassTable *codegen_classtable = new CgenClassTable(classes,os);
 }
 
 //////////////////////////////////////////////////////////////////////////////
