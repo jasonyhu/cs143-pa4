@@ -741,7 +741,7 @@ void CgenClassTable::code_prot_objs() {
           str << endl;
         } else if (type == Str) {
           str << WORD;
-          stringtable.lookup_string("0")->code_ref(str);
+          stringtable.lookup_string("")->code_ref(str);
           str << endl;
         } else if (type == Bool) {
           str << WORD;
@@ -773,6 +773,7 @@ void CgenClassTable::code_inits() {
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
     for (attr_class* attrib : attribs) {
+      attrib->dump(cout, 1);
       int id = nd->get_attr_ids().at(attrib->get_name());
       if (attrib->get_init()->is_empty()) {
         if (attrib->get_type() == Str) {
@@ -789,6 +790,7 @@ void CgenClassTable::code_inits() {
         Environment env(nd);
         env.nds = nds;
         attrib->get_init()->code(str, env);
+        emit_store(ACC, id + 3, SELF, str);
       }
     }
     emit_move(ACC, SELF, str);
@@ -1123,6 +1125,7 @@ void CgenClassTable::code()
     Symbol class_ = nd->get_name();
     Features features = lookup(class_)->get_features();
     for (int j = features->first(); features->more(j); j = features->next(j)) {
+      features->nth(j)->dump(cout, 1);
       features->nth(j)->code(str, nd, nds);
     }
   }
@@ -1396,7 +1399,7 @@ void isvoid_class::code(ostream &s, Environment env) {
 }
 
 void no_expr_class::code(ostream &s, Environment env) {
-  emit_move(ACC, ZERO, s);
+  // emit_move(ACC, ZERO, s);
 }
 
 void object_class::code(ostream &s, Environment env) {
