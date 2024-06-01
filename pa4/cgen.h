@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include <map>
 #include "cool-tree.h"
 #include "emit.h"
@@ -36,7 +37,7 @@ private:
   void code_constants();
   void code_class_name_table();
   void code_class_obj_table();
-  void code_disp_tables();
+  void  code_disp_tables();
   void code_prot_objs();
   void code_inits();
 
@@ -83,6 +84,8 @@ public:
   std::map<Symbol, int> get_attr_ids() { return attr_ids; };
   std::map<Symbol, Symbol> get_all_methods();
   std::map<Symbol, int> get_method_ids() { return method_ids; };
+  // std::map<Symbol, std::map<Symbol, int>> get_method_ids() { return method_ids; };
+  // void disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol, std::map<Symbol, int>>& method_ids);
 };
 
 class BoolConst {
@@ -118,3 +121,6 @@ class Environment {
     std::vector<Symbol> let_vars;
     std::vector<Symbol> params;
 };
+
+// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", "newO" (newO), and "param" to standardize
+
