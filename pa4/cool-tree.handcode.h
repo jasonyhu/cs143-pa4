@@ -75,6 +75,7 @@ typedef Cases_class *Cases;
   virtual void dump_with_types(ostream&,int) = 0; \
   virtual void code(ostream&, CgenNode* so, Environment* env) = 0; \
   virtual bool is_method() = 0; \
+  virtual Expression get_expr() = 0; \
   virtual Symbol get_name() = 0; \
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
@@ -89,11 +90,13 @@ typedef Cases_class *Cases;
 
 #define method_EXTRAS       \
   bool is_method() { return true; }; \
+  Expression get_expr() { return expr; };
 
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
   Symbol get_type() { return type_decl; } \
-  Expression get_init() { return init; }
+  Expression get_init() { return init; } \
+  Expression get_expr() { return init; };
 
 
 #define Formal_EXTRAS					\
@@ -106,11 +109,13 @@ typedef Cases_class *Cases;
 
 #define Case_EXTRAS							\
   virtual void code(ostream&, Environment* env) = 0;					\
-  virtual void dump_with_types(ostream& ,int) = 0;
+  virtual void dump_with_types(ostream& ,int) = 0; \
+  virtual void let_traverse() = 0; 
 
 #define branch_EXTRAS						\
   void code(ostream&, Environment* env);						\
-  void dump_with_types(ostream& ,int);
+  void dump_with_types(ostream& ,int); \
+  void let_traverse();
 
 #define Expression_EXTRAS					   \
   virtual void code(ostream&, Environment* env) = 0;				   \
@@ -120,11 +125,21 @@ typedef Cases_class *Cases;
   virtual void dump_with_types(ostream&,int) = 0;		   \
   void dump_type(ostream&, int);				   \
   Expression_class() { type = (Symbol) NULL; } \
-  bool is_empty() { return false; }
+  bool is_empty() { return false; } \
+  bool is_block() { return false; } \
+  bool has_expr() { return false; } \
+  virtual void let_traverse() = 0; 
 
 #define Expression_SHARED_EXTRAS				\
   void code(ostream&, Environment* env);						\
-  void dump_with_types(ostream&,int);
+  void dump_with_types(ostream&,int); \
+  void let_traverse();
+
+#define has_expr_EXTRAS \
+  bool has_expr() { return true; }
+
+#define block_EXTRAS \
+  bool is_block() { return true; }
 
 #define no_expr_EXTRAS \
   bool is_empty() { return true; }

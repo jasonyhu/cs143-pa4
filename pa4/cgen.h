@@ -28,7 +28,7 @@ private:
   std::ostream& str;
   SymbolTable<Symbol,int> class_to_tag_table;
   int tag_counter = 0;
-
+  std::map<Symbol, std::map<Symbol, int>> method_let_vars_table;
 
   // The following methods emit code for constants and global declarations.
   void code_global_data();
@@ -122,7 +122,7 @@ class BoolConst {
 //     std::vector<Symbol> params;
 // };
 
-// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", "newO" (newO), and "param" to standardize
+// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "letvar", and "param" to standardize
 class Environment : public SymbolTable<Symbol, std::pair<std::string, int>> {
 private:
 public:
@@ -131,5 +131,7 @@ public:
   std::list<CgenNodeP> nds;
   std::map<Symbol, std::map<Symbol, int>> get_method_ids() { return method_ids; };
   CgenNodeP get_so() { return so; };
+  Symbol cur_method;
   std::map<Symbol, std::map<Symbol, int>> method_ids;
+  std::map<Symbol, std::map<Symbol, int>> method_let_vars_table;
 };
