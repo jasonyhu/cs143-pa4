@@ -1263,6 +1263,17 @@ void loop_class::code(ostream &s, Environment* env) {
 // TODO
 void typcase_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
+  emit_bne(ACC, ZERO, label, s);
+  emit_load_address(ACC, "str_const0", s);
+  emit_load_imm(T1, line_number, s);
+  emit_jal("_case_abort2", s);
+
+  emit_label_def(label, s);
+  label++;
+
+  emit_load(T1, 0, ACC, s);
+
+
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
     cases->nth(i)->code(s, env);
   }
@@ -1287,7 +1298,8 @@ void let_class::code(ostream &s, Environment* env) {
   }
   emit_push(ACC, s);
   env->enterscope();
-  // add a single let to the scope.
+  env->addid(identifier, new std::pair<std::string, int>("let", 0)); 
+  // TODO: how do we keep track of the id of the let variable??
 
   body->code(s, env);
   emit_addiu(SP, SP, 4, s);
