@@ -1457,6 +1457,7 @@ void new__class::code(ostream &s, Environment* env) {
   } else {
     emit_partial_load_address(ACC, s);
     emit_protobj_ref(type_name, s);
+    s << std::endl;
     emit_jal("Object.copy", s);
     // TODO: question - do the inits set non-basic attrs to the default initializations?
     // answer: yes -- jason, all non-basic attrs are default initialized to void (0)
