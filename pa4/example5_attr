@@ -242,36 +242,36 @@ class_objTab:
 	.word	Main_init
 Object_dispTab:
 	.word	Object.abort
-	.word	Object.copy
 	.word	Object.type_name
+	.word	Object.copy
 IO_dispTab:
 	.word	Object.abort
-	.word	Object.copy
-	.word	IO.in_int
-	.word	IO.in_string
-	.word	IO.out_int
-	.word	IO.out_string
 	.word	Object.type_name
+	.word	Object.copy
+	.word	IO.out_string
+	.word	IO.out_int
+	.word	IO.in_string
+	.word	IO.in_int
 Int_dispTab:
 	.word	Object.abort
-	.word	Object.copy
 	.word	Object.type_name
+	.word	Object.copy
 Bool_dispTab:
 	.word	Object.abort
-	.word	Object.copy
 	.word	Object.type_name
+	.word	Object.copy
 String_dispTab:
-	.word	String.concat
 	.word	Object.abort
+	.word	Object.type_name
 	.word	Object.copy
 	.word	String.length
+	.word	String.concat
 	.word	String.substr
-	.word	Object.type_name
 Main_dispTab:
-	.word	Main.main
 	.word	Object.abort
-	.word	Object.copy
 	.word	Object.type_name
+	.word	Object.copy
+	.word	Main.main
 	.word	-1
 Object_protObj:
 	.word	0
@@ -351,7 +351,7 @@ Int_init:
 	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
-	sw	$a0 12($s0)
+	move	$a0 $zero
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -366,7 +366,7 @@ Bool_init:
 	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
-	sw	$a0 12($s0)
+	move	$a0 $zero
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -381,8 +381,9 @@ String_init:
 	addiu	$fp $sp 16
 	move	$s0 $a0
 	jal	Object_init
+	move	$a0 $zero
 	sw	$a0 12($s0)
-	sw	$a0 16($s0)
+	move	$a0 $zero
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -413,6 +414,7 @@ Main.main:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
+	lw	$a0 8($s0)
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)

@@ -741,7 +741,7 @@ void CgenClassTable::code_prot_objs() {
       if (attrib->get_name() == val) {
         if (nd->get_name() == Str) {
           str << WORD;
-          inttable.lookup_string("0")->code_ref(str);
+          inttable.lookup_string("")->code_ref(str);
           str << std::endl;
         } else {
           str << WORD << "0" << endl;
@@ -752,7 +752,7 @@ void CgenClassTable::code_prot_objs() {
         Symbol type = attrib->get_type();
         if (type == Int) {
           str << WORD;
-          inttable.lookup_string("0")->code_ref(str);
+          inttable.lookup_string("")->code_ref(str);
           str << endl;
         } else if (type == Str) {
           str << WORD;
