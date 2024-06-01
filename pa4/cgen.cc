@@ -1287,27 +1287,16 @@ void assign_class::code(ostream &s, Environment* env) {
   int id;
   id = env->lookup(name)->second;
   if (env->lookup(name)->first == "param") {
-<<<<<<< HEAD
-    emit_load(ACC, id, FP, s);
+    emit_store(ACC, id, FP, s);
   } else if (env->lookup(name)->first == "attr") {
-    // todo: not exactly sure why we use self but okay
     emit_store(ACC, id + 3, SELF, s);
     if (cgen_Memmgr > 0) {
       // todo: add addiu operaiton
       emit_gc_assign(s);
     }
   } else if (env->lookup(name)->first == "letvar") {
-    // todo
-    emit_load(ACC, id, FP, s);
-  }
-=======
-    emit_store(ACC, id, FP, s);
-  } else if (env->lookup(name)->first == "attr") {
-    emit_store(ACC, id + 3, SELF, s);
-  } else if (env->lookup(name)->first == "let") {
-    emit_load(ACC, id + 1, SP, s);
+    emit_load(ACC, id, SP, s);
   } 
->>>>>>> cd921944ee3636fbd36c08b43bf2afaeb61207d9
 }
 
 void static_dispatch_class::code(ostream &s, Environment* env) {
@@ -1674,22 +1663,14 @@ void object_class::code(ostream &s, Environment* env) {
   if (env->lookup(name)->first == "param") {
     emit_load(ACC, id, FP, s);
   } else if (env->lookup(name)->first == "attr") {
-<<<<<<< HEAD
-    emit_load(ACC, id + 2, SELF, s);
+    emit_load(ACC, id + 3, SELF, s);
     if (cgen_Memmgr > 0) {
       // todo: add addiu operation and do this for param and letvar
       emit_gc_assign(s);
     }
-  } else if (env->lookup(name)->first == "letvar") {
-    emit_load(ACC, id, FP, s);
-  } else {
-    return;
-  }
-=======
     emit_load(ACC, id + 3, SELF, s);
-  } else if (env->lookup(name)->first == "let") {
+  } else if (env->lookup(name)->first == "letvar") {
      emit_load(ACC, id + 1, SP, s);
   } 
->>>>>>> cd921944ee3636fbd36c08b43bf2afaeb61207d9
 }
 
