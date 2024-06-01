@@ -688,15 +688,6 @@ void CgenNode::disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol
 
 
 std::map<Symbol, std::map<Symbol, int>> CgenClassTable::code_disp_tables() {
-  // for (CgenNodeP nd : nds) {
-  //   Symbol class_ = nd->get_name();
-  //   // emit_disptable_ref(class_, str);
-  //   // str << LABEL;
-  //   // std::map<Symbol, Symbol> all_methods = nd->get_all_methods();
-  //   // for (auto method = all_methods.begin(); method != all_methods.end(); method++) {
-  //   //   str << WORD << method->second << "." << method->first << std::endl;
-  //   // }
-  // }
   std::map<Symbol, std::map<Symbol, int>> method_ids;
   for (Symbol class_ : classes) {
     emit_disptable_ref(class_, str);
@@ -801,7 +792,6 @@ Environment CgenClassTable::code_inits() {
     std::vector<attr_class*> attribs = nd->get_all_attrs();
     
     for (attr_class* attrib : attribs) {
-      // attrib->dump(cout, 1);
       int id = nd->get_attr_ids().at(attrib->get_name());
       // ALEX: modified, see github for more info
       std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
@@ -1138,7 +1128,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   env->exitscope();
 }
 
-// TODO
+// do we need to do anything here? i don't think so -- jason
 void attr_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   init->code(s, env);
 }
@@ -1289,25 +1279,24 @@ void block_class::code(ostream &s, Environment* env) {
 
 // TODO
 void let_class::code(ostream &s, Environment* env) {
-  init->code(s, env);
-  body->code(s, env);
+  if (init->type != nullptr) {
+    init->code(s, env);
+  } else if (type_decl == Str) {
+    emit_load_string(ACC, stringtable.lookup_string(""), s);
+  } else if (type_decl == Int) {
+    emit_load_int(ACC, inttable.lookup_string("0"), s);
+  } else if (type_decl == Bool) {
+    emit_load_bool(ACC, falsebool, s);
+  }
+  emit_push(ACC, s);
   // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
   env->enterscope();
 
+  body->code(s, env);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void plus_class::code(ostream &s, Environment* env) {
-  // e1->code(s, env);
-  // emit_fetch_int(ACC, ACC, s);
-  // emit_push(ACC, s);
-  // e2->code(s, env);
-  // emit_load(T1, 1, SP, s);
-  // emit_fetch_int(T1, T1, s);
-  // emit_fetch_int(T2, ACC, s);
-  // emit_add(T1, T1, T2, s);
-  // emit_store_int(T1, ACC, s);
-  // emit_addiu(SP, SP, 4, s);
-  // TODO: we need to create a new object.
   e1->code(s, env);
   emit_push(ACC, s);
   e2->code(s, env);
@@ -1385,27 +1374,25 @@ void lt_class::code(ostream &s, Environment* env) {
 }
 
 void eq_class::code(ostream &s, Environment* env) {
+  if (e1->get_type() == Str) {
+    cout << "\t# string equality " << e1->get_line_number() << endl;
+  }
   e1->code(s, env);
-  emit_push(ACC, s);
+  emit_move(T1, ACC, s);
   e2->code(s, env);
-  emit_load(T1, 1, SP, s);
   emit_move(T2, ACC, s);
+  emit_load_bool(ACC, truebool, s);
+  emit_load_bool(A1, falsebool, s);
 
   if (e1->get_type() == Int || e1->get_type() == Str || e1->get_type() == Bool) {
-    if (e2->get_type() == Int || e2->get_type() == Str || e2->get_type() == Bool) {
-      emit_load_bool(ACC, truebool, s);
-      emit_load_bool(A1, falsebool, s);
-      emit_jal("equality_test", s);
-    }
+    cout << "\t# " << e1->get_type() << endl;
+    emit_jal("equality_test", s);
+  } else {
+    emit_beq(T1, T2, label, s);
+    emit_load_bool(ACC, falsebool, s);
+    emit_label_def(label, s);
+    label++;
   }
-
-  emit_load_bool(ACC, truebool, s);
-  emit_beq(T1, T2, label, s);
-  emit_load_bool(ACC, falsebool, s);
-  emit_label_def(label, s);
-  label++;
-
-  emit_addiu(SP, SP, 4, s);
 }
 
 void leq_class::code(ostream &s, Environment* env) {
