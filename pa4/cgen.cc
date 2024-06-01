@@ -666,36 +666,11 @@ std::map<Symbol, Symbol> CgenNode::get_all_methods() {
     }
     int i = 0;
     for (auto it = all_methods.begin(); it != all_methods.end(); it++) {
-      // method_ids[it->first] = i;
+      method_ids[it->first] = i;
       i++;
     }
   }
   return all_methods;
-}
-
-void CgenNode::disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol, std::map<Symbol, int>>& method_ids) {
-  if (get_parentnd() != NULL) {
-    get_parentnd()->disp_traversal(dispTabClass, str, method_ids);
-  }
-  for (int i = features->first(); features->more(i); i = features->next(i)) {
-    if (features->nth(i)->is_method()) {
-      str << WORD << name->get_string() << "." << features->nth(i)->get_name()->get_string() << std::endl;
-      method_ids[dispTabClass][features->nth(i)->get_name()] = method_tag_counter;
-      method_tag_counter++;
-    }
-  }
-}
-
-
-std::map<Symbol, std::map<Symbol, int>> CgenClassTable::code_disp_tables() {
-  std::map<Symbol, std::map<Symbol, int>> method_ids;
-  for (Symbol class_ : classes) {
-    emit_disptable_ref(class_, str);
-    str << LABEL;
-    lookup(class_)->disp_traversal(class_, str, method_ids);
-    method_tag_counter = 0;
-  }
-  return method_ids;
 }
 
 std::vector<attr_class*> CgenNode::get_all_attrs() {
@@ -770,20 +745,17 @@ void CgenClassTable::code_prot_objs() {
   }
 }
 
-Environment CgenClassTable::code_inits() {
-  Environment env(nds);
-  env.enterscope();
+void CgenClassTable::code_inits() {
   for (CgenNode* nd : nds) {
     str << nd->get_name() << CLASSINIT_SUFFIX << LABEL;
     emit_addiu(SP, SP, -12, str);
     emit_store(FP, 3, SP, str);
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
-    // ALEX: chanaged this to 16 to conform to reference
+    // ALEX: changed this to 16 to conform to reference
     emit_addiu(FP, SP, 16, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
-    env.so = nd;
     if (parent != No_class) {
       str << JAL;
       emit_init_ref(parent, str);
@@ -793,9 +765,7 @@ Environment CgenClassTable::code_inits() {
     
     for (attr_class* attrib : attribs) {
       int id = nd->get_attr_ids().at(attrib->get_name());
-      // ALEX: modified, see github for more info
-      std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
-      env.addid(attrib->get_name(), value);
+      Environment env(nd);
       attrib->get_init()->code(str, &env);
       if (attrib->get_type() == Str) {
         emit_store(ACC, id + 3, SELF, str);
@@ -812,7 +782,14 @@ Environment CgenClassTable::code_inits() {
     emit_addiu(SP, SP, 12, str);
     emit_return(str);
   }
-  return env;
+}
+
+void CgenClassTable::code_disp_tables() {
+  for (CgenNodeP nd : nds) {
+    emit_disptable_ref(nd->get_name(), str);
+    str << LABEL;
+    
+  }
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : str(s) {
@@ -967,7 +944,6 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   // and the symbol table.
   class_to_tag_table.addid(name, new int(tag_counter));
   tag_counter++;
-  classes.push_back(name);
   nds.push_front(nd);
   addid(name, nd);
 }
@@ -1032,7 +1008,7 @@ void CgenClassTable::code()
     code_class_obj_table();
 
     if (cgen_debug) std::cerr << "coding dispatch tables" << std::endl;
-    std::map<Symbol, std::map<Symbol, int>>  method_ids = code_disp_tables();
+    code_disp_tables();
 
     if (cgen_debug) std::cerr << "coding prototype objects" << std::endl;
     code_prot_objs();
@@ -1041,16 +1017,15 @@ void CgenClassTable::code()
     code_global_text();
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
-    Environment env = code_inits();
-    env.method_ids = method_ids;
+    code_inits();
+
     for (CgenNodeP nd : nds) {
-      env.so = nd;
       Symbol name = nd->get_name();
+      Environment env(nd);
       if (name == Object || name == Str || name == IO || name == Bool || name == Int) {
         continue;
       }
-      Symbol class_ = nd->get_name();
-      Features features = lookup(class_)->get_features();
+      Features features = lookup(name)->get_features();
       for (int j = features->first(); features->more(j); j = features->next(j)) {
         features->nth(j)->code(str, nd, &env);
       }
@@ -1099,7 +1074,6 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-// TODO
 void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
@@ -1109,23 +1083,16 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_store(RA, 1, SP ,s);
   emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
-  int arg_count = 0;
-  env->enterscope();
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
-    // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
-    // todo: idk how method formals are set
-    std::pair<std::string, int>* value = new std::pair<std::string, int>("param", arg_count);
-    env->addid(formals->nth(i)->get_name(), value);
-    arg_count++;
+    env->add_param(formals->nth(i)->get_name());
   }
   expr->code(s, env);
   emit_load(FP, 3, SP, s);
   emit_load(SELF, 2, SP, s);
   emit_load(RA, 1, SP, s);
   emit_addiu(SP, SP, 12, s);
-  emit_addiu(SP, SP, arg_count * 4, s);
+  emit_addiu(SP, SP, formals->len() * 4, s);
   emit_return(s);
-  env->exitscope();
 }
 
 // do we need to do anything here? i don't think so -- jason
@@ -1142,15 +1109,15 @@ void branch_class::code(ostream &s, Environment* env) {
 void assign_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   // expr is stored in ACC
-
-  // todo: needs multiple case handling (attribute, let_var
-  int id;
-  id = env->lookup(name)->second;
-  if (env->lookup(name)->first == "param") {
-    emit_load(ACC, id, FP, s);
+  int i = env->lookup_var(name);
+  int j = env->lookup_param(name);
+  int k = env->lookup_attr(name);
+  if (i != -1) {
+    emit_store(ACC, -i - 1, FP, s);
+  } else if (j != -1) {
+    emit_store(ACC, j + 1, FP, s);
   } else {
-    // todo: not exactly sure why we use self but okay
-    emit_store(ACC, id + 3, SELF, s);
+    emit_store(ACC, k + DEFAULT_OBJFIELDS, SELF, s);
   }
 }
 
@@ -1186,13 +1153,12 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
   emit_load_address(T1, disp_tab.c_str(), s);
 
   // get method from dispatch table
-  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
+  int id = cur_class_node->get_method_ids().at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
 
 void dispatch_class::code(ostream &s, Environment* env) {
-  env->enterscope();
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
@@ -1229,7 +1195,7 @@ void dispatch_class::code(ostream &s, Environment* env) {
       }
   }
   emit_load(T1, 2, ACC, s);
-  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
+  int id = cur_class_node->get_method_ids().at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
@@ -1278,7 +1244,6 @@ void block_class::code(ostream &s, Environment* env) {
   }
 }
 
-// TODO
 void let_class::code(ostream &s, Environment* env) {
   if (init->type != nullptr) {
     init->code(s, env);
@@ -1290,9 +1255,7 @@ void let_class::code(ostream &s, Environment* env) {
     emit_load_bool(ACC, falsebool, s);
   }
   emit_push(ACC, s);
-  env->enterscope();
-  // add a single let to the scope.
-
+  env->add_let(identifier);
   body->code(s, env);
   emit_addiu(SP, SP, 4, s);
 }
@@ -1477,30 +1440,20 @@ void no_expr_class::code(ostream &s, Environment* env) {
   emit_move(ACC, ZERO, s);
 }
 
-// TODO
 void object_class::code(ostream &s, Environment* env) {
-  // TODO: map object identifier to environment?
-  CgenNodeP cur_class_node; 
-  Symbol cur_class = env->get_so()->get_name();
-  for (CgenNodeP nd : env->nds) {
-      if (cur_class == nd->get_name()) {
-        cur_class_node = nd;
-        break;
-      }
-  }
-  int id;
-  // todo: needs to handle multiple cases
-  // todo: handle self-dispatch calls
   if (name == self) {
     emit_move(ACC, SELF, s);
-    return;
   } else {
-    id = env->lookup(name)->second;
-  }
-  if (env->lookup(name)->first == "param") {
-    emit_load(ACC, id, FP, s);
-  } else {
-    emit_load(ACC, id + 2, SELF, s);
+    int i = env->lookup_var(name);
+    int j = env->lookup_param(name);
+    int k = env->lookup_attr(name);
+    if (i != -1) {
+      emit_load(ACC, -i - 1, FP, s);
+    } else if (j != -1) {
+      emit_load(ACC, i + 2, FP, s);
+    } else {
+      emit_load(ACC, k + DEFAULT_OBJFIELDS, SELF, s);
+    }
   }
 }
 

@@ -37,7 +37,7 @@ private:
   void code_constants();
   void code_class_name_table();
   void code_class_obj_table();
-  void  code_disp_tables();
+  void code_disp_tables();
   void code_prot_objs();
   void code_inits();
 
@@ -84,7 +84,6 @@ public:
   std::map<Symbol, int> get_attr_ids() { return attr_ids; };
   std::map<Symbol, Symbol> get_all_methods();
   std::map<Symbol, int> get_method_ids() { return method_ids; };
-  // std::map<Symbol, std::map<Symbol, int>> get_method_ids() { return method_ids; };
   // void disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol, std::map<Symbol, int>>& method_ids);
 };
 
@@ -101,12 +100,31 @@ class Environment {
   public:
     Environment(CgenNodeP so) : so(so) {};
     std::list<CgenNodeP> nds;
-    int lookup_param(Symbol name);
+
+    
+    int lookup_param(Symbol name) {
+      for (size_t i = 0; i < params.size(); i++) {
+        if (params[i] == name) {
+          return params.size() - i - 1;
+        }
+      }
+      return -1;
+    }
+
     int lookup_attr(Symbol name) {
       std::map<Symbol, int> attr_ids = so->get_attr_ids();
       return attr_ids.at(name);
-    };
-    int lookup_var(Symbol name);
+    }
+
+    int lookup_var(Symbol name) {
+        for (size_t i = let_vars.size() - 1; i >= 0; i--) {
+          if (let_vars[i] == name) {
+            return i;
+          }
+        }
+        return -1;
+    }
+
     int add_let(Symbol name) {
       let_vars.push_back(name);
       return let_vars.size() - 1;
@@ -120,7 +138,9 @@ class Environment {
     CgenNodeP so;
     std::vector<Symbol> let_vars;
     std::vector<Symbol> params;
+    std::list<int> scope_size;
+    std::list<Symbol> variable_ids;
+    std::list<Symbol> param_ids;
 };
 
-// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", "newO" (newO), and "param" to standardize
 
