@@ -101,7 +101,6 @@ class Environment {
     Environment(CgenNodeP so) : so(so) {};
     std::list<CgenNodeP> nds;
 
-    
     int lookup_param(Symbol name) {
       for (size_t i = 0; i < params.size(); i++) {
         if (params[i] == name) {
@@ -111,36 +110,52 @@ class Environment {
       return -1;
     }
 
-    int lookup_attr(Symbol name) {
-      std::map<Symbol, int> attr_ids = so->get_attr_ids();
-      return attr_ids.at(name);
-    }
-
-    int lookup_var(Symbol name) {
-        for (size_t i = let_vars.size() - 1; i >= 0; i--) {
-          if (let_vars[i] == name) {
-            return i;
+    int lookup_let(Symbol name) {
+        for (size_t i = lets.size() - 1; i >= 0; i--) {
+          if (lets[i] == name) {
+            return lets.size() - i - 1;
           }
         }
         return -1;
     }
 
-    int add_let(Symbol name) {
-      let_vars.push_back(name);
-      return let_vars.size() - 1;
+    int lookup_attr(Symbol name) {
+      return so->get_attr_ids().at(name);
     }
+
+    int add_let(Symbol name) {
+      lets.push_back(name);
+      scopes[scopes.size() - 1]++;
+      return lets.size() - 1;
+    }
+
     int add_param(Symbol name) {
       params.push_back(name);
       return params.size() - 1;
     }
-    CgenNodeP get_so() const { return so; }
+
+    void enterscope() {
+      scopes.push_back(0);
+    }
+
+    void exitscope() {
+      for (int i = 0; i < scopes[scopes.size() - 1]; i++) {
+        lets.pop_back();
+      }
+      scopes.pop_back();
+    }
+
+    int add_standoff() {
+      enterscope();
+      return add_let(No)
+    }
+
+    CgenNodeP get_so() { return so; }
   private:
     CgenNodeP so;
-    std::vector<Symbol> let_vars;
+    std::vector<Symbol> lets;
     std::vector<Symbol> params;
-    std::list<int> scope_size;
-    std::list<Symbol> variable_ids;
-    std::list<Symbol> param_ids;
+    std::vector<int> scopes;
 };
 
 
