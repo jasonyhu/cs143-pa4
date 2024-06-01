@@ -741,7 +741,7 @@ void CgenClassTable::code_prot_objs() {
       if (attrib->get_name() == val) {
         if (nd->get_name() == Str) {
           str << WORD;
-          inttable.lookup_string("")->code_ref(str);
+          inttable.lookup_string("0")->code_ref(str);
           str << std::endl;
         } else {
           str << WORD << "0" << endl;
@@ -752,7 +752,7 @@ void CgenClassTable::code_prot_objs() {
         Symbol type = attrib->get_type();
         if (type == Int) {
           str << WORD;
-          inttable.lookup_string("")->code_ref(str);
+          inttable.lookup_string("0")->code_ref(str);
           str << endl;
         } else if (type == Str) {
           str << WORD;
@@ -1138,20 +1138,18 @@ void branch_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
 }
 
-// TODO
 void assign_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
-  // expr is stored in ACC
 
-  // todo: needs multiple case handling (attribute, let_var
   int id;
   id = env->lookup(name)->second;
   if (env->lookup(name)->first == "param") {
-    emit_load(ACC, id, FP, s);
-  } else {
-    // todo: not exactly sure why we use self but okay
+    emit_store(ACC, id, FP, s);
+  } else if (env->lookup(name)->first == "attr") {
     emit_store(ACC, id + 3, SELF, s);
-  }
+  } else if (env->lookup(name)->first == "let") {
+    emit_load(ACC, id + 1, SP, s);
+  } 
 }
 
 void static_dispatch_class::code(ostream &s, Environment* env) {
@@ -1198,7 +1196,6 @@ void dispatch_class::code(ostream &s, Environment* env) {
     // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
     emit_push(ACC, s);
   }
-  cout << " # dispatching to " << endl;
   expr->code(s, env);
 
   // added to conform with code, also seems like it's necessary for BNE to work?
@@ -1385,7 +1382,6 @@ void eq_class::code(ostream &s, Environment* env) {
   emit_load_bool(A1, falsebool, s);
 
   if (e1->get_type() == Int || e1->get_type() == Str || e1->get_type() == Bool) {
-    cout << "\t# " << e1->get_type() << endl;
     emit_jal("equality_test", s);
   } else {
     emit_beq(T1, T2, label, s);
@@ -1477,7 +1473,6 @@ void no_expr_class::code(ostream &s, Environment* env) {
   emit_move(ACC, ZERO, s);
 }
 
-// TODO
 void object_class::code(ostream &s, Environment* env) {
   // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
@@ -1489,8 +1484,6 @@ void object_class::code(ostream &s, Environment* env) {
       }
   }
   int id;
-  // todo: needs to handle multiple cases
-  // todo: handle self-dispatch calls
   if (name == self) {
     emit_move(ACC, SELF, s);
     return;
@@ -1499,8 +1492,10 @@ void object_class::code(ostream &s, Environment* env) {
   }
   if (env->lookup(name)->first == "param") {
     emit_load(ACC, id, FP, s);
-  } else {
-    emit_load(ACC, id + 2, SELF, s);
-  }
+  } else if (env->lookup(name)->first == "attr") {
+    emit_load(ACC, id + 3, SELF, s);
+  } else if (env->lookup(name)->first == "let") {
+     emit_load(ACC, id + 1, SP, s);
+  } 
 }
 

@@ -413,7 +413,6 @@ Main.main:
 	la	$a0 str_const1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
- # dispatching to 
 	la	$a0 IO_protObj
 	jal	Object.copy
 	jal	IO_init
