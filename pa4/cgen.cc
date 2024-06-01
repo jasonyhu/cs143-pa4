@@ -27,6 +27,9 @@
 
 int label = 0;
 int method_tag_counter = 0;
+int let_counter = 0;
+int internal_let_counter = 0;
+int arg_count = 0;
 
 //
 // Two symbols from the semantic analyzer (semant.cc) are used.
@@ -694,6 +697,14 @@ std::map<Symbol, std::map<Symbol, int>> CgenClassTable::code_disp_tables() {
     str << LABEL;
     lookup(class_)->disp_traversal(class_, str, method_ids);
     method_tag_counter = 0;
+    for (int i = lookup(class_)->get_features()->first(); lookup(class_)->get_features()->more(i); i = lookup(class_)->get_features()->next(i)) {
+      if (lookup(class_)->get_features()->nth(i)->is_method()) {
+        // let_traverse through the method and get the let_counter
+        lookup(class_)->get_features()->nth(i)->get_expr()->let_traverse();
+        method_let_vars_table[class_][lookup(class_)->get_features()->nth(i)->get_name()] = let_counter;
+        let_counter = 0;
+      }
+    }
   }
   return method_ids;
 }
@@ -1042,6 +1053,7 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
     Environment env = code_inits();
+    env.method_let_vars_table = method_let_vars_table;
     env.method_ids = method_ids;
     for (CgenNodeP nd : nds) {
       env.so = nd;
@@ -1089,6 +1101,134 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
   stringtable.add_string(name->get_string());          // Add class name to string table
 }
 
+// **
+// Let traversal methods
+// **
+
+void assign_class::let_traverse() {
+  expr->let_traverse();
+}
+
+void static_dispatch_class::let_traverse() {
+  expr->let_traverse();
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) { 
+    actual->nth(i)->let_traverse();
+  }
+}
+
+void dispatch_class::let_traverse() {
+  expr->let_traverse();
+  for (int i = actual->first(); actual->more(i); i = actual->next(i)) { 
+    actual->nth(i)->let_traverse();
+  }
+  
+}
+
+void cond_class::let_traverse() {
+  pred->let_traverse();
+  then_exp->let_traverse();
+  else_exp->let_traverse();
+}
+
+void loop_class::let_traverse() {
+  pred->let_traverse();
+  body->let_traverse();
+}
+
+void typcase_class::let_traverse() {
+  expr->let_traverse();
+  for (int i = cases->first(); cases->more(i); i = cases->next(i)) { 
+    cases->nth(i)->let_traverse();
+  }
+}
+
+void branch_class::let_traverse() {
+  expr->let_traverse();
+}
+
+void block_class::let_traverse() {
+  for (int i = body->first(); body->more(i); i = body->next(i)) { 
+    body->nth(i)->let_traverse();
+  }
+}
+
+void let_class::let_traverse() {
+// todo: increment int counter
+  let_counter++;
+  init->let_traverse();
+  body->let_traverse();
+}
+
+void plus_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+void sub_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+void mul_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+void divide_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+
+void neg_class::let_traverse() {
+  e1->let_traverse();
+}
+
+void lt_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+
+void eq_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+
+void leq_class::let_traverse() {
+  e1->let_traverse();
+  e2->let_traverse();
+}
+
+void comp_class::let_traverse() {
+  e1->let_traverse();
+}
+
+void int_const_class::let_traverse() {
+  
+}
+
+void bool_const_class::let_traverse() {
+  
+}
+
+void string_const_class::let_traverse() {
+  
+}
+
+void new__class::let_traverse() {
+  
+}
+
+void isvoid_class::let_traverse() {
+  e1->let_traverse();
+}
+
+void no_expr_class::let_traverse() {
+  
+}
+
+void object_class::let_traverse() {
+  
+}
+
+
+
 //******************************************************************
 //
 //   Fill in the following methods to produce code for the
@@ -1103,14 +1243,7 @@ CgenNode::CgenNode(Class_ nd,Basicness bstatus, CgenClassTableP ct) :
 void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
-  emit_addiu(SP, SP, -12, s);
-  emit_store(FP, 3, SP, s);
-  emit_store(SELF, 2, SP, s);
-  emit_store(RA, 1, SP ,s);
-  emit_addiu(FP, SP, 16, s);
-  emit_move(SELF, ACC, s);
-  int arg_count = 0;
-  env->enterscope();
+  arg_count = 0;
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
     // todo: idk how method formals are set
@@ -1118,12 +1251,23 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
     env->addid(formals->nth(i)->get_name(), value);
     arg_count++;
   }
+  // todo: seems like we also need to increment -12 by however many local variables + arguments there are. multiply 8 * let_counter
+  // LET HANDLING
+  int let_count = env->method_let_vars_table[env->so->get_name()][name];
+  emit_addiu(SP, SP, -12 - let_count * 8, s);
+  emit_store(FP, 3, SP, s);
+  emit_store(SELF, 2, SP, s);
+  emit_store(RA, 1, SP ,s);
+  emit_addiu(FP, SP, 16, s);
+  emit_move(SELF, ACC, s);
+  let_counter = 0;
+  env->cur_method = name;
+  env->enterscope();  
   expr->code(s, env);
   emit_load(FP, 3, SP, s);
   emit_load(SELF, 2, SP, s);
   emit_load(RA, 1, SP, s);
-  emit_addiu(SP, SP, 12, s);
-  emit_addiu(SP, SP, arg_count * 4, s);
+  emit_addiu(SP, SP, 12 + arg_count * 4 + let_count * 8, s);
   emit_return(s);
   env->exitscope();
 }
@@ -1148,9 +1292,16 @@ void assign_class::code(ostream &s, Environment* env) {
   id = env->lookup(name)->second;
   if (env->lookup(name)->first == "param") {
     emit_load(ACC, id, FP, s);
-  } else {
+  } else if (env->lookup(name)->first == "attr") {
     // todo: not exactly sure why we use self but okay
     emit_store(ACC, id + 3, SELF, s);
+    if (cgen_Memmgr > 0) {
+      // todo: add addiu operaiton
+      emit_gc_assign(s);
+    }
+  } else if (env->lookup(name)->first == "letvar") {
+    // todo
+    emit_load(ACC, id, FP, s);
   }
 }
 
@@ -1280,21 +1431,33 @@ void block_class::code(ostream &s, Environment* env) {
 
 // TODO
 void let_class::code(ostream &s, Environment* env) {
-  if (init->type != nullptr) {
-    init->code(s, env);
-  } else if (type_decl == Str) {
-    emit_load_string(ACC, stringtable.lookup_string(""), s);
-  } else if (type_decl == Int) {
-    emit_load_int(ACC, inttable.lookup_string("0"), s);
-  } else if (type_decl == Bool) {
-    emit_load_bool(ACC, falsebool, s);
-  }
-  emit_push(ACC, s);
+  // add single let to scope
   env->enterscope();
-  // add a single let to the scope.
+  int id = internal_let_counter + env->method_let_vars_table.at(env->so->get_name()).at(env->cur_method);
+  std::pair<std::string, int>* val = new std::pair<std::string, int>("letvar", id);
+  env->addid(identifier, val);
+  internal_let_counter++;
 
+  init->code(s, env);
+  // emit_load_address("$s1", ACC, s);
   body->code(s, env);
-  emit_addiu(SP, SP, 4, s);
+  // emit_addiu(SP, SP, 4, s);
+  // init->code(s, env);
+  
+  internal_let_counter = 0;
+  env->exitscope();
+  // // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
+  // env->enterscope();
+  // // todo: not sure if let_counter + arg_count is right
+  // emit_push(ACC, s);
+  // int id = let_counter // + total_lets;
+  // std::pair<std::string, int>* val = new std::pair<std::string, int>("letvar", id + 1);
+  // env->addid(identifier, val);
+  // let_counter++;
+  // emit_store("s1", id, s);
+  // body->code(s, env);
+  // emit_load(s1, id, s);
+  // env->exitscope();
 }
 
 void plus_class::code(ostream &s, Environment* env) {
@@ -1499,8 +1662,16 @@ void object_class::code(ostream &s, Environment* env) {
   }
   if (env->lookup(name)->first == "param") {
     emit_load(ACC, id, FP, s);
-  } else {
+  } else if (env->lookup(name)->first == "attr") {
     emit_load(ACC, id + 2, SELF, s);
+    if (cgen_Memmgr > 0) {
+      // todo: add addiu operation and do this for param and letvar
+      emit_gc_assign(s);
+    }
+  } else if (env->lookup(name)->first == "letvar") {
+    emit_load(ACC, id, FP, s);
+  } else {
+    return;
   }
 }
 

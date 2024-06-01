@@ -263,6 +263,10 @@ public:
 #ifdef branch_EXTRAS
    branch_EXTRAS
 #endif
+#ifdef has_expr_EXTRAS
+   has_expr_EXTRAS
+#endif
+
 };
 
 
@@ -285,6 +289,10 @@ public:
 #ifdef assign_EXTRAS
    assign_EXTRAS
 #endif
+#ifdef has_expr_EXTRAS
+   has_expr_EXTRAS
+#endif
+
 };
 
 
@@ -311,6 +319,13 @@ public:
 #ifdef static_dispatch_EXTRAS
    static_dispatch_EXTRAS
 #endif
+#ifdef has_expr_EXTRAS
+   has_expr_EXTRAS
+#endif
+#ifdef is_dispatch_EXTRAS
+   is_dispatch_EXTRAS
+#endif
+
 };
 
 
@@ -335,6 +350,10 @@ public:
 #ifdef dispatch_EXTRAS
    dispatch_EXTRAS
 #endif
+#ifdef has_expr_EXTRAS
+   has_expr_EXTRAS
+#endif
+
 };
 
 
@@ -403,6 +422,10 @@ public:
 #ifdef typcase_EXTRAS
    typcase_EXTRAS
 #endif
+#ifdef has_expr_EXTRAS
+   has_expr_EXTRAS
+#endif
+
 };
 
 

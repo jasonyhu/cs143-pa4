@@ -1,14 +1,7 @@
-class A {
-  a : Int <- 5;
-  b : String;
-  foo() : A {
-    new SELF_TYPE
-  };
-};
-
-class Main inherits A {
-  c: Int;
+class Main {
   main(): Object {
-    foo()
+    {
+    let x: Int <- 5, z: Int <- 7 in x + z;
+    }
   };
 };
