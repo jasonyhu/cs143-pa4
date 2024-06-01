@@ -73,25 +73,25 @@ typedef Cases_class *Cases;
 
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
-  virtual void code(ostream&, CgenNode* so, std::list<CgenNodeP> nds) = 0; \
-  virtual bool is_method() = 0;
+  virtual void code(ostream&, CgenNode* so, Environment* env) = 0; \
+  virtual bool is_method() = 0; \
+  virtual Symbol get_name() = 0; \
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
 
 
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
-  void code(ostream&, CgenNode* so, std::list<CgenNodeP> nds); \
+  void code(ostream&, CgenNode* so, Environment* env); \
+  Symbol get_name() { return name; };
   // void disPrint(Symbol name, ostream& str);
   // void attrPrint(Symbol name, ostream& str);
 
 #define method_EXTRAS       \
   bool is_method() { return true; }; \
-  Symbol get_name() { return name; } 
 
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
-  Symbol get_name() { return name; } \
   Symbol get_type() { return type_decl; } \
   Expression get_init() { return init; }
 
@@ -105,15 +105,15 @@ typedef Cases_class *Cases;
   Symbol get_name() { return name; };
 
 #define Case_EXTRAS							\
-  virtual void code(ostream&, Environment env) = 0;					\
+  virtual void code(ostream&, Environment* env) = 0;					\
   virtual void dump_with_types(ostream& ,int) = 0;
 
 #define branch_EXTRAS						\
-  void code(ostream&, Environment env);						\
+  void code(ostream&, Environment* env);						\
   void dump_with_types(ostream& ,int);
 
 #define Expression_EXTRAS					   \
-  virtual void code(ostream&, Environment env) = 0;				   \
+  virtual void code(ostream&, Environment* env) = 0;				   \
   Symbol type;							   \
   Symbol get_type() { return type; }				   \
   Expression set_type(Symbol s) { type = s; return this; }	   \
@@ -123,7 +123,7 @@ typedef Cases_class *Cases;
   bool is_empty() { return false; }
 
 #define Expression_SHARED_EXTRAS				\
-  void code(ostream&, Environment env);						\
+  void code(ostream&, Environment* env);						\
   void dump_with_types(ostream&,int);
 
 #define no_expr_EXTRAS \

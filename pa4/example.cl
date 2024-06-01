@@ -1,5 +1,14 @@
-class Main {
-    main(): Object {
-      if true then (new IO).out_string("meow") else (new IO).out_string("woof") fi
-    };
+class A {
+  a : Int <- 5;
+  b : String;
+  foo() : A {
+    new SELF_TYPE
+  };
+};
+
+class Main inherits A {
+  c: Int;
+  main(): Object {
+    foo()
+  };
 };
