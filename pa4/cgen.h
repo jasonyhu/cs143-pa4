@@ -24,6 +24,7 @@ typedef CgenNode *CgenNodeP;
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
   std::list<CgenNodeP> nds;  // nodes
+  std::list<Symbol> classes;
   std::ostream& str;
   SymbolTable<Symbol,int> class_to_tag_table;
   int tag_counter = 0;
@@ -37,7 +38,7 @@ private:
   void code_constants();
   void code_class_name_table();
   void code_class_obj_table();
-  void code_disp_tables();
+  std::map<Symbol, std::map<Symbol, int>>  code_disp_tables();
   void code_prot_objs();
   Environment code_inits();
 
@@ -65,7 +66,7 @@ private:
   std::vector<attr_class*> all_attrs;
   std::map<Symbol, Symbol> all_methods;
   std::map<Symbol, int> attr_ids;
-  std::map<Symbol, int> method_ids;
+  // std::map<Symbol, std::map<Symbol, int>> method_ids;
 
 public:
   CgenNode(Class_ c,
@@ -83,7 +84,8 @@ public:
   std::vector<attr_class*> get_all_attrs();
   std::map<Symbol, int> get_attr_ids() { return attr_ids; };
   std::map<Symbol, Symbol> get_all_methods();
-  std::map<Symbol, int> get_method_ids() { return method_ids; };
+  // std::map<Symbol, std::map<Symbol, int>> get_method_ids() { return method_ids; };
+  void disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol, std::map<Symbol, int>>& method_ids);
 };
 
 class BoolConst {
@@ -120,12 +122,14 @@ class BoolConst {
 //     std::vector<Symbol> params;
 // };
 
-// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", and "param" to standardize
+// ALEX: string is kind of funky so i'm open to changing it to something cleaner, but we can just use "attr", "let", "case", "newO" (newO), and "param" to standardize
 class Environment : public SymbolTable<Symbol, std::pair<std::string, int>> {
 private:
-  CgenNodeP so;
 public:
+  CgenNodeP so;
   Environment(std::list<CgenNodeP> param) { nds = param; };
   std::list<CgenNodeP> nds;
+  std::map<Symbol, std::map<Symbol, int>> get_method_ids() { return method_ids; };
   CgenNodeP get_so() { return so; };
+  std::map<Symbol, std::map<Symbol, int>> method_ids;
 };

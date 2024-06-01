@@ -26,6 +26,7 @@
 #include "handle_flags.h"
 
 int label = 0;
+int method_tag_counter = 0;
 
 //
 // Two symbols from the semantic analyzer (semant.cc) are used.
@@ -665,23 +666,45 @@ std::map<Symbol, Symbol> CgenNode::get_all_methods() {
     }
     int i = 0;
     for (auto it = all_methods.begin(); it != all_methods.end(); it++) {
-      method_ids[it->first] = i;
+      // method_ids[it->first] = i;
       i++;
     }
   }
   return all_methods;
 }
 
-void CgenClassTable::code_disp_tables() {
-  for (CgenNodeP nd : nds) {
-    Symbol class_ = nd->get_name();
-    emit_disptable_ref(class_, str);
-    str << LABEL;
-    std::map<Symbol, Symbol> all_methods = nd->get_all_methods();
-    for (auto method = all_methods.begin(); method != all_methods.end(); method++) {
-      str << WORD << method->second << "." << method->first << std::endl;
+void CgenNode::disp_traversal(Symbol dispTabClass, ostream& str, std::map<Symbol, std::map<Symbol, int>>& method_ids) {
+  if (get_parentnd() != NULL) {
+    get_parentnd()->disp_traversal(dispTabClass, str, method_ids);
+  }
+  for (int i = features->first(); features->more(i); i = features->next(i)) {
+    if (features->nth(i)->is_method()) {
+      str << WORD << name->get_string() << "." << features->nth(i)->get_name()->get_string() << std::endl;
+      method_ids[dispTabClass][features->nth(i)->get_name()] = method_tag_counter;
+      method_tag_counter++;
     }
   }
+}
+
+
+std::map<Symbol, std::map<Symbol, int>> CgenClassTable::code_disp_tables() {
+  // for (CgenNodeP nd : nds) {
+  //   Symbol class_ = nd->get_name();
+  //   // emit_disptable_ref(class_, str);
+  //   // str << LABEL;
+  //   // std::map<Symbol, Symbol> all_methods = nd->get_all_methods();
+  //   // for (auto method = all_methods.begin(); method != all_methods.end(); method++) {
+  //   //   str << WORD << method->second << "." << method->first << std::endl;
+  //   // }
+  // }
+  std::map<Symbol, std::map<Symbol, int>> method_ids;
+  for (Symbol class_ : classes) {
+    emit_disptable_ref(class_, str);
+    str << LABEL;
+    lookup(class_)->disp_traversal(class_, str, method_ids);
+    method_tag_counter = 0;
+  }
+  return method_ids;
 }
 
 std::vector<attr_class*> CgenNode::get_all_attrs() {
@@ -769,6 +792,7 @@ Environment CgenClassTable::code_inits() {
     emit_addiu(FP, SP, 16, str);
     emit_move(SELF, ACC, str);
     Symbol parent = nd->get_parent();
+    env.so = nd;
     if (parent != No_class) {
       str << JAL;
       emit_init_ref(parent, str);
@@ -780,15 +804,15 @@ Environment CgenClassTable::code_inits() {
       // attrib->dump(cout, 1);
       int id = nd->get_attr_ids().at(attrib->get_name());
       // ALEX: modified, see github for more info
-      std::pair<std::string, int> value = std::make_pair("attr", id);
-      env.addid(attrib->get_name(), &value);
+      std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
+      env.addid(attrib->get_name(), value);
       attrib->get_init()->code(str, &env);
       if (attrib->get_type() == Str) {
-        emit_store(ACC, id + 2, SELF, str);
+        emit_store(ACC, id + 3, SELF, str);
       } else if (attrib->get_type() == Int) {
-        emit_store(ACC, id + 2, SELF, str);
+        emit_store(ACC, id + 3, SELF, str);
       } else if (attrib->get_type() == Bool) {
-        emit_store(ACC, id + 2, SELF, str);
+        emit_store(ACC, id + 3, SELF, str);
       }
     }
     emit_move(ACC, SELF, str);
@@ -953,6 +977,7 @@ void CgenClassTable::install_class(CgenNodeP nd) {
   // and the symbol table.
   class_to_tag_table.addid(name, new int(tag_counter));
   tag_counter++;
+  classes.push_back(name);
   nds.push_front(nd);
   addid(name, nd);
 }
@@ -1017,7 +1042,7 @@ void CgenClassTable::code()
     code_class_obj_table();
 
     if (cgen_debug) std::cerr << "coding dispatch tables" << std::endl;
-    code_disp_tables();
+    std::map<Symbol, std::map<Symbol, int>>  method_ids = code_disp_tables();
 
     if (cgen_debug) std::cerr << "coding prototype objects" << std::endl;
     code_prot_objs();
@@ -1027,18 +1052,19 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
     Environment env = code_inits();
-
-  for (CgenNodeP nd : nds) {
-    Symbol name = nd->get_name();
-    if (name == Object || name == Str || name == IO || name == Bool || name == Int) {
-      continue;
+    env.method_ids = method_ids;
+    for (CgenNodeP nd : nds) {
+      env.so = nd;
+      Symbol name = nd->get_name();
+      if (name == Object || name == Str || name == IO || name == Bool || name == Int) {
+        continue;
+      }
+      Symbol class_ = nd->get_name();
+      Features features = lookup(class_)->get_features();
+      for (int j = features->first(); features->more(j); j = features->next(j)) {
+        features->nth(j)->code(str, nd, &env);
+      }
     }
-    Symbol class_ = nd->get_name();
-    Features features = lookup(class_)->get_features();
-    for (int j = features->first(); features->more(j); j = features->next(j)) {
-      features->nth(j)->code(str, nd, &env);
-    }
-  }
 
 }
 
@@ -1094,8 +1120,12 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_addiu(FP, SP, 16, s);
   emit_move(SELF, ACC, s);
   int arg_count = 0;
+  env->enterscope();
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
+    // todo: idk how method formals are set
+    std::pair<std::string, int>* value = new std::pair<std::string, int>("param", arg_count);
+    env->addid(formals->nth(i)->get_name(), value);
     arg_count++;
   }
   expr->code(s, env);
@@ -1105,6 +1135,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_addiu(SP, SP, 12, s);
   emit_addiu(SP, SP, arg_count * 4, s);
   emit_return(s);
+  env->exitscope();
 }
 
 // TODO
@@ -1122,18 +1153,15 @@ void assign_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   // expr is stored in ACC
 
-  CgenNodeP cur_class_node; 
-  Symbol cur_class = env->get_so()->get_name();
-  for (CgenNodeP nd : env->nds) {
-      if (cur_class == nd->get_name()) {
-        cur_class_node = nd;
-        break;
-      }
+  // todo: needs multiple case handling (attribute, let_var
+  int id;
+  id = env->lookup(name)->second;
+  if (env->lookup(name)->first == "param") {
+    emit_load(ACC, id, FP, s);
+  } else {
+    // todo: not exactly sure why we use self but okay
+    emit_store(ACC, id + 3, SELF, s);
   }
-  int id = cur_class_node->get_attr_ids().at(name);
-
-  // dest should be E(id) or the attr offset
-  emit_store(ACC, id + 2, SELF, s);
 }
 
 void static_dispatch_class::code(ostream &s, Environment* env) {
@@ -1152,7 +1180,6 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
 
   emit_label_def(label, s);
   label++;
-  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
 
   // get dispatch table for the statically dispatched class
   CgenNodeP cur_class_node; 
@@ -1169,17 +1196,18 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
   emit_load_address(T1, disp_tab.c_str(), s);
 
   // get method from dispatch table
-  int id = cur_class_node->get_method_ids().at(name);
+  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
 
 void dispatch_class::code(ostream &s, Environment* env) {
+  env->enterscope();
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
+    // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
     emit_push(ACC, s);
   }
-
   expr->code(s, env);
 
   // added to conform with code, also seems like it's necessary for BNE to work?
@@ -1191,6 +1219,7 @@ void dispatch_class::code(ostream &s, Environment* env) {
   emit_load_imm(T1, line_number, s);
   emit_jal("_dispatch_abort", s);
 
+
   emit_label_def(label, s);
   label++;
 
@@ -1198,7 +1227,6 @@ void dispatch_class::code(ostream &s, Environment* env) {
   if (expr->get_type() != SELF_TYPE) {
     cur_class = expr->get_type();
   }
-  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
 
   // seg faults here
   CgenNodeP cur_class_node; 
@@ -1210,7 +1238,7 @@ void dispatch_class::code(ostream &s, Environment* env) {
       }
   }
   emit_load(T1, 2, ACC, s);
-  int id = cur_class_node->get_method_ids().at(name);
+  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
@@ -1429,36 +1457,29 @@ void bool_const_class::code(ostream& s, Environment* env)
 void new__class::code(ostream &s, Environment* env) {
   // might be different for basic classes
   // TODO: refactor this into other JAL emits
-  if (type_name == SELF_TYPE) {
-  /* An offset into this table for creating an object with the same dynamic type as self can be computed by
-  reading the class tag for self, add/subtract/multiply this value by constants, and add it to the address
-  of class objTab. */
-    // TODO: revisit with more classes
-    // TODO: add self to the class_to_tag_table lookup table
-    // class_to_tag_table.lookup(self);
-    // TODO: i just transcribed the results so this definitely needs a second check
+  Symbol type = type_name;
+  if (type == SELF_TYPE) {
     emit_store("$s1", 1, FP, s);
     emit_load_address(T1, "class_objTab", s);
     emit_load(T2, 0, SELF, s);
-    // add/multiplies the class tag by a constant
     emit_sll(T2, T2, 3, s);
-    // computes offset within class_objTab (NEEDS ADJUSTMENT)
     emit_addu(T1, T1, T2, s);
     emit_move("$s1", T1, s);
     emit_load(ACC, 0, T1, s);
     emit_jal("Object.copy", s);
     emit_load(T1, 1, "$s1", s);
     emit_jalr(T1, s);
-    // different for attributes
     emit_load("$s1", 1, FP, s);
     // TODO: where do we use _init? does this need a stack machine?
   } else {
     emit_partial_load_address(ACC, s);
-    s << type_name->get_string() << PROTOBJ_SUFFIX << std::endl;
+    s << type->get_string() << PROTOBJ_SUFFIX << std::endl;
     emit_jal("Object.copy", s);
     // TODO: question - do the inits set non-basic attrs to the default initializations?
-    s << JAL << type_name->get_string() << CLASSINIT_SUFFIX << std::endl;
-  }  
+    s << JAL << type->get_string() << CLASSINIT_SUFFIX << std::endl;
+
+  }
+
   // case that allocates an object of SELF_TYPE
   // object allocated should be of the same type as the dynamic type of the self object
 
@@ -1489,7 +1510,19 @@ void object_class::code(ostream &s, Environment* env) {
         break;
       }
   }
-  int id = cur_class_node->get_attr_ids().at(name);
-  emit_load(ACC, id + 2, SELF, s);
+  int id;
+  // todo: needs to handle multiple cases
+  // todo: handle self-dispatch calls
+  if (name == self) {
+    emit_move(ACC, SELF, s);
+    return;
+  } else {
+    id = env->lookup(name)->second;
+  }
+  if (env->lookup(name)->first == "param") {
+    emit_load(ACC, id, FP, s);
+  } else {
+    emit_load(ACC, id + 2, SELF, s);
+  }
 }
 

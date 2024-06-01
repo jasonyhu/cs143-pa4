@@ -1,11 +1,14 @@
-class Main {
+class A {
   a : Int <- 5;
-
-  roar(c : Int): Object {
-    let b : Int <- 2 in b + 3
+  b : String;
+  foo() : A {
+    new SELF_TYPE
   };
+};
 
+class Main inherits A {
+  c: Int;
   main(): Object {
-    roar(a)
+    foo()
   };
 };

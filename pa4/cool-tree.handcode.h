@@ -74,7 +74,8 @@ typedef Cases_class *Cases;
 #define Feature_EXTRAS						\
   virtual void dump_with_types(ostream&,int) = 0; \
   virtual void code(ostream&, CgenNode* so, Environment* env) = 0; \
-  virtual bool is_method() = 0;
+  virtual bool is_method() = 0; \
+  virtual Symbol get_name() = 0; \
   // virtual void disPrint(Symbol name, ostream& str) = 0; 
   // virtual void attrPrint(Symbol name, ostream& str) = 0; 
 
@@ -82,16 +83,15 @@ typedef Cases_class *Cases;
 #define Feature_SHARED_EXTRAS					\
   void dump_with_types(ostream&,int); \
   void code(ostream&, CgenNode* so, Environment* env); \
+  Symbol get_name() { return name; };
   // void disPrint(Symbol name, ostream& str);
   // void attrPrint(Symbol name, ostream& str);
 
 #define method_EXTRAS       \
   bool is_method() { return true; }; \
-  Symbol get_name() { return name; } 
 
 #define attr_EXTRAS     \
   bool is_method() { return false; } \
-  Symbol get_name() { return name; } \
   Symbol get_type() { return type_decl; } \
   Expression get_init() { return init; }
 
