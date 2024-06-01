@@ -1289,8 +1289,8 @@ void let_class::code(ostream &s, Environment* env) {
     emit_load_bool(ACC, falsebool, s);
   }
   emit_push(ACC, s);
-  // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
   env->enterscope();
+  // add a single let to the scope.
 
   body->code(s, env);
   emit_addiu(SP, SP, 4, s);
