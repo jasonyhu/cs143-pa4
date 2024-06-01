@@ -1198,6 +1198,7 @@ void dispatch_class::code(ostream &s, Environment* env) {
     // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
     emit_push(ACC, s);
   }
+  cout << " # dispatching to " << endl;
   expr->code(s, env);
 
   // added to conform with code, also seems like it's necessary for BNE to work?
@@ -1374,13 +1375,12 @@ void lt_class::code(ostream &s, Environment* env) {
 }
 
 void eq_class::code(ostream &s, Environment* env) {
-  if (e1->get_type() == Str) {
-    cout << "\t# string equality " << e1->get_line_number() << endl;
-  }
   e1->code(s, env);
-  emit_move(T1, ACC, s);
+  emit_push(ACC, s);
   e2->code(s, env);
   emit_move(T2, ACC, s);
+  emit_load(T1, 1, SP, s);
+  emit_addiu(SP, SP, 4, s);
   emit_load_bool(ACC, truebool, s);
   emit_load_bool(A1, falsebool, s);
 
