@@ -1081,7 +1081,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_store(FP, 3, SP, s);
   emit_store(SELF, 2, SP, s);
   emit_store(RA, 1, SP ,s);
-  emit_addiu(FP, SP, 16, s);
+  emit_addiu(FP, SP, 4, s);
   emit_move(SELF, ACC, s);
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     env->add_param(formals->nth(i)->get_name());
@@ -1114,10 +1114,22 @@ void assign_class::code(ostream &s, Environment* env) {
   int k = env->lookup_attr(name);
   if (i != -1) {
     emit_store(ACC, -i - 1, FP, s);
+    if (cgen_Memmgr == 1) {
+            emit_addiu(A1, SP, 4 * (i + 1), s);
+            emit_jal("_GenGC_Assign", s);
+    }
   } else if (j != -1) {
     emit_store(ACC, j + 1, FP, s);
+    if (cgen_Memmgr == 1) {
+            emit_addiu(A1, FP, 4 * (j + 3), s);
+            emit_jal("_GenGC_Assign", s);
+    }
   } else {
     emit_store(ACC, k + DEFAULT_OBJFIELDS, SELF, s);
+    if (cgen_Memmgr == 1) {
+            emit_addiu(A1, SELF, 4 * (k + 3), s);
+            emit_jal("_GenGC_Assign", s);
+    }
   }
 }
 
@@ -1139,7 +1151,6 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
   emit_label_def(label, s);
   label++;
 
-  // get dispatch table for the statically dispatched class
   CgenNodeP cur_class_node; 
   for (CgenNodeP nd : env->nds) {
       if (type_name == nd->get_name()) {
@@ -1148,7 +1159,7 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
       }
   }
 
-  // load dispatch table
+  // load dispatch table for the statically dispatched class
   std::string disp_tab = type_name->get_string();
   disp_tab.append(DISPTAB_SUFFIX);
   emit_load_address(T1, disp_tab.c_str(), s);
@@ -1183,14 +1194,12 @@ void dispatch_class::code(ostream &s, Environment* env) {
   emit_label_def(label, s);
   label++;
 
-  Symbol cur_class = env->get_so()->get_name();
-  if (expr->get_type() != SELF_TYPE) {
-    cur_class = expr->get_type();
+  Symbol cur_class = expr->get_type();
+  if (cur_class == SELF_TYPE) {
+    cur_class = env->get_so()->get_name();
   }
 
-  // seg faults here
   CgenNodeP cur_class_node; 
-  // codegen_classtable->get_class_node(cur_class);
   for (CgenNodeP nd : env->nds) {
       if (cur_class == nd->get_name()) {
         cur_class_node = nd;

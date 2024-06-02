@@ -240,6 +240,12 @@ class_objTab:
 	.word	String_init
 	.word	Main_protObj
 	.word	Main_init
+Object_dispTab:
+IO_dispTab:
+Int_dispTab:
+Bool_dispTab:
+String_dispTab:
+Main_dispTab:
 	.word	-1
 Object_protObj:
 	.word	0
@@ -376,7 +382,7 @@ Main.type_name:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 16
+	addiu	$fp $sp 4
 	move	$s0 $a0
 	la	$a0 str_const1
 	lw	$fp 12($sp)
@@ -390,7 +396,7 @@ Main.main:
 	sw	$fp 12($sp)
 	sw	$s0 8($sp)
 	sw	$ra 4($sp)
-	addiu	$fp $sp 16
+	addiu	$fp $sp 4
 	move	$s0 $a0
 	la	$a0 str_const2
 	lw	$fp 12($sp)
