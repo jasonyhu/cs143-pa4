@@ -385,6 +385,7 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	la	$a0 int_const0
 	sw	$a0 12($s0)
 	move	$a0 $zero
 	sw	$a0 16($s0)

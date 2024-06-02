@@ -401,7 +401,8 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
-	sw	$a0 12($s0)
+	la	$a0 int_const0
+	sw	$a0 8($s0)
 	move	$a0 $zero
 	sw	$a0 16($s0)
 	move	$a0 $s0
@@ -420,10 +421,10 @@ Main_init:
 	jal	Object_init
 	la	$a0 str_const1
 	sw	$a0 12($s0)
-	sw	$a0 12($s0)
+	sw	$a0 8($s0)
 	la	$a0 str_const2
 	sw	$a0 16($s0)
-	sw	$a0 16($s0)
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -441,7 +442,7 @@ Main.main:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
-	lw	$a0 12($s0)
+	lw	$a0 8($s0)
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
 	la	$a0 IO_protObj
@@ -455,7 +456,7 @@ label0:
 	lw	$t1 8($a0)
 	lw	$t1 12($t1)
 	jalr		$t1
-	lw	$a0 16($s0)
+	lw	$a0 12($s0)
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
 	la	$a0 IO_protObj

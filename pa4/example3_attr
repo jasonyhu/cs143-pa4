@@ -441,6 +441,7 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	la	$a0 int_const3
 	sw	$a0 12($s0)
 	move	$a0 $zero
 	sw	$a0 16($s0)
@@ -462,9 +463,7 @@ Main_init:
 	jal	Object.copy
 	jal	IO_init
 	sw	$a0 12($s0)
-	la	$a0 Mom_protObj
-	jal	Object.copy
-	jal	Mom_init
+	move	$a0 $zero
 	sw	$a0 16($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
@@ -525,9 +524,7 @@ Mom_init:
 	jal	Object.copy
 	jal	IO_init
 	sw	$a0 24($s0)
-	la	$a0 Mom_protObj
-	jal	Object.copy
-	jal	Mom_init
+	move	$a0 $zero
 	sw	$a0 24($s0)
 Main.main:
 	addiu	$sp $sp -12
@@ -536,7 +533,9 @@ Main.main:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
-	lw	$a0 16($s0)
+	la	$a0 Mom_protObj
+	jal	Object.copy
+	jal	Mom_init
 	bne	$a0 $zero label0
 	la	$a0 str_const0
 	li	$t1 5
@@ -547,7 +546,9 @@ label0:
 	jalr		$t1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($s0)
+	la	$a0 IO_protObj
+	jal	Object.copy
+	jal	IO_init
 	bne	$a0 $zero label1
 	la	$a0 str_const0
 	li	$t1 5
@@ -556,7 +557,9 @@ label1:
 	lw	$t1 8($a0)
 	lw	$t1 16($t1)
 	jalr		$t1
-	lw	$a0 16($s0)
+	la	$a0 Mom_protObj
+	jal	Object.copy
+	jal	Mom_init
 	bne	$a0 $zero label2
 	la	$a0 str_const0
 	li	$t1 6
@@ -567,7 +570,9 @@ label2:
 	jalr		$t1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($s0)
+	la	$a0 IO_protObj
+	jal	Object.copy
+	jal	IO_init
 	bne	$a0 $zero label3
 	la	$a0 str_const0
 	li	$t1 6

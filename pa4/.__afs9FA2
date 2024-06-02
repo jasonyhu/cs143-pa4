@@ -1,0 +1,46 @@
+#1
+_program
+  #1
+  _class
+    Main
+    Object
+    "example3_attr.cl"
+    (
+    #2
+    _attr
+      b
+      Mom
+      #2
+      _new
+        Mom
+      : Mom
+    #3
+    _method
+      main
+      Object
+      #4
+      _dispatch
+        #4
+        _object
+          b
+        : Mom
+        printB
+        (
+        )
+      : Int
+    )
+  #8
+  _class
+    Mom
+    Object
+    "example3_attr.cl"
+    (
+    #9
+    _method
+      printB
+      Int
+      #9
+      _int
+        5
+      : Int
+    )

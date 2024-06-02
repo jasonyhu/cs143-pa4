@@ -809,13 +809,21 @@ Environment CgenClassTable::code_inits() {
       env.addid(attrib->get_name(), value);
       attrib->code(str, nd, &env);
       env.attr_counter++;
-      if (attrib->get_type() == Str) {
-        emit_store(ACC, id + 3, SELF, str);
-      } else if (attrib->get_type() == Int) {
-        emit_store(ACC, id + 3, SELF, str);
-      } else if (attrib->get_type() == Bool) {
+      if (attrib->get_init()->is_empty()) {
+        if (attrib->get_type() == Int) {
+          IntEntry *i = inttable.lookup_string("0");
+          emit_load_int(ACC, i, str);
+        } else if (attrib->get_type() == Bool) {
+          emit_load_bool(ACC, falsebool, str);
+        } else if (attrib->get_type() == Str) {
+          StringEntry *i = stringtable.lookup_string(""); 
+          emit_load_string(ACC, i, str);
+        }
+      }
+      if (attrib->get_type() == Str || attrib->get_type() == Int || attrib->get_type() == Bool) {
         emit_store(ACC, id + 3, SELF, str);
       }
+      
     }
     emit_move(ACC, SELF, str);
     emit_load(FP, 3, SP, str);
@@ -1244,6 +1252,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
   arg_count = 0;
+  env->enterscope();
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     // env.vars.addid(nd->get_name(), formals->nth(i)->get_name());
     // todo: idk how method formals are set
@@ -1262,7 +1271,6 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   emit_move(SELF, ACC, s);
   let_counter = 0;
   env->cur_method = name;
-  env->enterscope();  
   expr->code(s, env);
   emit_load(FP, 3, SP, s);
   emit_load(SELF, 2, SP, s);
@@ -1297,7 +1305,7 @@ void assign_class::code(ostream &s, Environment* env) {
       emit_gc_assign(s);
     }
   } else if (env->lookup(name)->first == "letvar") {
-    emit_load(ACC, id, FP, s);
+    emit_store(ACC, id, FP, s);
   } 
 }
 
@@ -1442,10 +1450,21 @@ void let_class::code(ostream &s, Environment* env) {
   std::pair<std::string, int>* val = new std::pair<std::string, int>("letvar", id);
   env->addid(identifier, val);
   internal_let_counter++;
-  
   init->code(s, env);
+  if (init->is_empty()) {
+    // todo: what about for non-basic classes
+    if (type_decl == Int) {
+      IntEntry *i = inttable.lookup_string("0");;
+      emit_load_int(ACC, i, s);
+    } else if (type_decl == Bool) {
+      emit_load_bool(ACC, falsebool, s);
+    } else if (type_decl == Str) {
+      StringEntry *i = stringtable.lookup_string("");;
+      emit_load_string(ACC, i, s);
+    }
+  }
+
   emit_store(ACC, id, FP, s);
-  
   body->code(s, env);
   internal_let_counter = 0;
   env->exitscope();

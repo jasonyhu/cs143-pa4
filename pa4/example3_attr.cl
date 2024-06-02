@@ -1,9 +1,9 @@
 class Main {
     a: IO <- new IO;
-    b: Mom <- new Mom;
+    b: Mom;
     main():IO {{
-        a.out_int(b.printB());
-        a.out_int(b.printA());
+        (new IO).out_int((new Mom).printB());
+        (new IO).out_int((new Mom).printA());
     }
     };
 };

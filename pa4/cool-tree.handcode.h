@@ -125,7 +125,7 @@ typedef Cases_class *Cases;
   virtual void dump_with_types(ostream&,int) = 0;		   \
   void dump_type(ostream&, int);				   \
   Expression_class() { type = (Symbol) NULL; } \
-  bool is_empty() { return false; } \
+  virtual bool is_empty() { return false; } \
   bool is_block() { return false; } \
   bool has_expr() { return false; } \
   virtual void let_traverse() = 0; 
@@ -143,6 +143,7 @@ typedef Cases_class *Cases;
 
 #define no_expr_EXTRAS \
   bool is_empty() { return true; }
+
 
 
 #endif  // COOL_TREE_HANDCODE_H
