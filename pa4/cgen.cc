@@ -1050,6 +1050,8 @@ CgenNodeP CgenNode::get_parentnd()
   return parentnd;
 }
 
+std::map<Symbol, std::map<Symbol, int>>  method_ids;
+
 void CgenClassTable::code()
 {
     if (cgen_debug) std::cerr << "coding global data" << std::endl;
@@ -1071,7 +1073,7 @@ void CgenClassTable::code()
     code_class_parent_table();
 
     if (cgen_debug) std::cerr << "coding dispatch tables" << std::endl;
-    std::map<Symbol, std::map<Symbol, int>>  method_ids = code_disp_tables();
+    method_ids = code_disp_tables();
 
     if (cgen_debug) std::cerr << "coding prototype objects" << std::endl;
     code_prot_objs();
@@ -1081,9 +1083,18 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
     Environment env = code_inits();
-
     env.method_let_vars_table = method_let_vars_table;
     env.method_ids = method_ids;
+    // cerr << "dumping method ids" << endl;
+    // for(const auto& elem : method_ids)
+    // {
+    //   std::cerr << elem.first << endl;
+    //   for(const auto& elem2 : elem.second) {
+    //       std::cerr << "\t" << elem2.first << elem2.second << endl;
+    //   }
+    // }
+
+
     for (CgenNodeP nd : nds) {
       env.so = nd;
       Symbol name = nd->get_name();
@@ -1370,7 +1381,7 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
   emit_load_address(T1, disp_tab.c_str(), s);
 
   // get method from dispatch table
-  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
+  int id = method_ids.at(cur_class_node->get_name()).at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
@@ -1412,7 +1423,7 @@ void dispatch_class::code(ostream &s, Environment* env) {
       }
   }
   emit_load(T1, 2, ACC, s);
-  int id = env->get_method_ids().at(cur_class_node->get_name()).at(name);
+  int id = method_ids.at(cur_class_node->get_name()).at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
 }
@@ -1512,7 +1523,6 @@ void typcase_class::code(ostream &s, Environment* env) {
     emit_label_def(l, s);
     emit_push(ACC, s);
     env->enterscope();
-
     env->addid(branch->get_name(), new std::pair<std::string, int>("param", counter));
     branch->code(s, env);
     emit_addiu(SP, SP, 4, s);
