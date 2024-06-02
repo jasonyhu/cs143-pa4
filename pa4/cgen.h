@@ -134,4 +134,5 @@ public:
   Symbol cur_method;
   std::map<Symbol, std::map<Symbol, int>> method_ids;
   std::map<Symbol, std::map<Symbol, int>> method_let_vars_table;
+  int attr_counter;
 };

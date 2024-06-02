@@ -801,13 +801,14 @@ Environment CgenClassTable::code_inits() {
       str << std::endl;
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
-    
+    env.attr_counter = 3;
     for (attr_class* attrib : attribs) {
       int id = nd->get_attr_ids().at(attrib->get_name());
       // ALEX: modified, see github for more info
       std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
       env.addid(attrib->get_name(), value);
-      attrib->get_init()->code(str, &env);
+      attrib->code(str, nd, &env);
+      env.attr_counter++;
       if (attrib->get_type() == Str) {
         emit_store(ACC, id + 3, SELF, str);
       } else if (attrib->get_type() == Int) {
@@ -1274,6 +1275,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
 // do we need to do anything here? i don't think so -- jason
 void attr_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   init->code(s, env);
+  emit_store(ACC, env->attr_counter, SELF, s);
 }
 
 // TODO

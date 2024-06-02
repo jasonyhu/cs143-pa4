@@ -1,5 +1,11 @@
 class Main {
-    main():Int {1};
+    a: IO <- new IO;
+    b: Mom <- new Mom;
+    main():IO {{
+        a.out_int(b.printB());
+        a.out_int(b.printA());
+    }
+    };
 };
 
 class Parent {
@@ -9,4 +15,6 @@ class Parent {
 class Mom inherits Parent {
     b:Int <- 1+2;
     c:Mom;
+    printB():Int { b };
+    printA():Int { a };
 };

@@ -351,6 +351,7 @@ Int_init:
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $zero
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -366,6 +367,7 @@ Bool_init:
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $zero
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -382,7 +384,9 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	sw	$a0 12($s0)
 	move	$a0 $zero
+	sw	$a0 16($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -428,5 +432,4 @@ label0:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	addiu	$sp $sp 0
 	jr	$ra	

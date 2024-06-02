@@ -4,42 +4,43 @@ _program
   _class
     Main
     Object
-    "example.cl"
+    "example3_attr.cl"
     (
     #2
+    _attr
+      b
+      Mom
+      #2
+      _new
+        Mom
+      : Mom
+    #3
     _method
       main
       Object
-      #3
-      _block
+      #4
+      _dispatch
         #4
-        _let
-          x
-          Int
-          #4
-          _int
-            5
-          : Int
-          #4
-          _let
-            z
-            Int
-            #4
-            _int
-              7
-            : Int
-            #4
-            _plus
-              #4
-              _object
-                x
-              : Int
-              #4
-              _object
-                z
-              : Int
-            : Int
-          : Int
-        : Int
+        _object
+          b
+        : Mom
+        printB
+        (
+        )
+      : Int
+    )
+  #8
+  _class
+    Mom
+    Object
+    "example3_attr.cl"
+    (
+    #9
+    _method
+      printB
+      Int
+      #9
+      _int
+        5
       : Int
     )
