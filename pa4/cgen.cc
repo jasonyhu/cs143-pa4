@@ -1109,7 +1109,7 @@ void branch_class::code(ostream &s, Environment* env) {
 void assign_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   // expr is stored in ACC
-  int i = env->lookup_var(name);
+  int i = env->lookup_let(name);
   int j = env->lookup_param(name);
   int k = env->lookup_attr(name);
   if (i != -1) {
@@ -1122,6 +1122,7 @@ void assign_class::code(ostream &s, Environment* env) {
 }
 
 void static_dispatch_class::code(ostream &s, Environment* env) {
+  emit_push(SELF, s);
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     emit_push(ACC, s);
@@ -1156,15 +1157,17 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
   int id = cur_class_node->get_method_ids().at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
+  emit_load(SELF, 1, SP, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void dispatch_class::code(ostream &s, Environment* env) {
+  emit_push(SELF, s);
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
     emit_push(ACC, s);
   }
-  cout << " # dispatching to " << endl;
   expr->code(s, env);
 
   // added to conform with code, also seems like it's necessary for BNE to work?
@@ -1198,6 +1201,8 @@ void dispatch_class::code(ostream &s, Environment* env) {
   int id = cur_class_node->get_method_ids().at(name);
   emit_load(T1, id, T1, s);
   emit_jalr(T1, s);
+  emit_load(SELF, 1, SP, s);
+  emit_addiu(SP, SP, 4, s);
 }
 
 void cond_class::code(ostream &s, Environment* env) {
@@ -1377,7 +1382,7 @@ void leq_class::code(ostream &s, Environment* env) {
 
 void comp_class::code(ostream &s, Environment* env) {
   e1->code(s, env);
-  emit_load(T1, 3, ACC, s);
+  emit_fetch_int(T1, ACC, s);
   emit_load_bool(ACC, truebool, s);
   emit_beqz(T1, label, s);
   emit_load_bool(ACC, falsebool, s);
@@ -1444,7 +1449,7 @@ void object_class::code(ostream &s, Environment* env) {
   if (name == self) {
     emit_move(ACC, SELF, s);
   } else {
-    int i = env->lookup_var(name);
+    int i = env->lookup_let(name);
     int j = env->lookup_param(name);
     int k = env->lookup_attr(name);
     if (i != -1) {

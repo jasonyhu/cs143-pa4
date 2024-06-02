@@ -125,7 +125,6 @@ class Environment {
 
     int add_let(Symbol name) {
       lets.push_back(name);
-      scopes[scopes.size() - 1]++;
       return lets.size() - 1;
     }
 
@@ -134,28 +133,11 @@ class Environment {
       return params.size() - 1;
     }
 
-    void enterscope() {
-      scopes.push_back(0);
-    }
-
-    void exitscope() {
-      for (int i = 0; i < scopes[scopes.size() - 1]; i++) {
-        lets.pop_back();
-      }
-      scopes.pop_back();
-    }
-
-    int add_standoff() {
-      enterscope();
-      return add_let(No)
-    }
-
     CgenNodeP get_so() { return so; }
   private:
     CgenNodeP so;
     std::vector<Symbol> lets;
     std::vector<Symbol> params;
-    std::vector<int> scopes;
 };
 
 
