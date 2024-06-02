@@ -1415,7 +1415,7 @@ void cond_class::code(ostream &s, Environment* env) {
 void loop_class::code(ostream &s, Environment* env) {
   int start = label;
   label++;
-  emit_label_def(label, s);
+  emit_label_def(start, s);
   pred->code(s, env);
   emit_fetch_int(ACC, ACC, s);
   int exit = label;
