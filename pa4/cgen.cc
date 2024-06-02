@@ -529,6 +529,7 @@ void CgenClassTable::code_global_data()
   str << GLOBAL << BOOLTAG << std::endl;
   str << GLOBAL << STRINGTAG << std::endl;
   str << GLOBAL << CLASSOBJTAB << std::endl;
+    str << GLOBAL << CLASSPARENTTAB << std::endl;
   for (CgenNodeP nd : nds) {
     str << GLOBAL << nd->get_name() << PROTOBJ_SUFFIX << std::endl;
     str << GLOBAL << nd->get_name() << "_init" << std::endl;
@@ -646,6 +647,17 @@ void CgenClassTable::code_class_obj_table() {
     Symbol class_ = nd->get_name();
     str << WORD << class_->get_string() << PROTOBJ_SUFFIX << std::endl;
     str << WORD << class_->get_string() << "_init" << std::endl;
+  }
+}
+
+void CgenClassTable::code_class_parent_table() {
+  str << CLASSPARENTTAB << LABEL;
+  for (CgenNodeP nd : nds) {
+    if (nd->get_name() == Object) {
+      str << WORD << NOPARENTTAG << std::endl;
+    } else {
+      str << WORD << *class_to_tag_table.lookup(nd->get_parent()) << std::endl;
+    }
   }
 }
 
@@ -785,6 +797,7 @@ Environment CgenClassTable::code_inits() {
   Environment env(nds);
   env.enterscope();
   for (CgenNode* nd : nds) {
+    env.class_tags[nd->get_name()] = *(class_to_tag_table.lookup(nd->get_name()));
     str << nd->get_name() << CLASSINIT_SUFFIX << LABEL;
     emit_addiu(SP, SP, -12, str);
     emit_store(FP, 3, SP, str);
@@ -1042,6 +1055,9 @@ void CgenClassTable::code()
     if (cgen_debug) std::cerr << "coding class object table" << std::endl;
     code_class_obj_table();
 
+    if (cgen_debug) std::cerr << "coding class parent table" << std::endl;
+    code_class_parent_table();
+
     if (cgen_debug) std::cerr << "coding dispatch tables" << std::endl;
     std::map<Symbol, std::map<Symbol, int>>  method_ids = code_disp_tables();
 
@@ -1053,6 +1069,7 @@ void CgenClassTable::code()
 
     if (cgen_debug) std::cerr << "coding initializers" << std::endl;
     Environment env = code_inits();
+
     env.method_let_vars_table = method_let_vars_table;
     env.method_ids = method_ids;
     for (CgenNodeP nd : nds) {
@@ -1416,15 +1433,81 @@ void typcase_class::code(ostream &s, Environment* env) {
   emit_load_imm(T1, line_number, s);
   emit_jal("_case_abort2", s);
 
-  emit_label_def(label, s);
+  std::map<Symbol, int> class_tags = env->class_tags;
+  CgenNodeP so = env->get_so();
+
+  std::vector<Symbol> branch_types;
+  std::map<Symbol, branch_class*> branches;
+  std::map<Symbol, int> branch_labels;
+
+  int expr_check = label;
+  label++;
+  int parent_loop = label;
+  label++;
+  int branch_success = label;
+  label++;
+  int branch_fail = label;
   label++;
 
-  emit_load(T1, 0, ACC, s);
-
-
   for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
-    cases->nth(i)->code(s, env);
+    branch_class* branch = (branch_class*)(cases->nth(i));
+    Symbol branch_type = branch->get_type();
+    branches[branch_type] = branch;
+    branch_labels[branch_type] = label;
+    label++;
+    branch_types.push_back(branch_type);
   }
+
+  std::sort(branch_types.begin(), branch_types.end(), [&](auto const &a, auto const &b) {
+    return class_tags[a] > class_tags[b];
+  });
+
+  emit_label_def(expr_check, s);
+  emit_load(T1, 0, ACC, s);
+  emit_move("$t3", T1, s);
+  emit_load_address("$t4", CLASSPARENTTAB, s);
+  emit_load_imm("$t8", NOPARENTTAG, s);
+  emit_load_imm("$t9", 4, s);
+  emit_label_def(parent_loop, s);
+  emit_beq("$t3", "$t8", branch_fail, s);
+  for (Symbol branch_type : branch_types) {
+    int l = branch_labels[branch_type];
+    int tag = class_tags[branch_type];
+    emit_load_imm(T2, tag, s);
+    emit_beq("$t3", T2, l, s);
+  }
+
+  emit_mul("$t3", "$t3", "$t9", s);
+  emit_add("$t3", "$t3", "$t4", s);
+  emit_load("$t3", 0, "$t3", s);
+
+  emit_beq(T1, T1, parent_loop, s);
+
+  for (Symbol branch_type : branch_types) {
+    int l = branch_labels[branch_type];
+    int tag = class_tags[branch_type];
+    branch_class* branch = branches[branch_type];
+
+    emit_label_def(l, s);
+    emit_push(ACC, s);
+    env->enterscope();
+
+    // can we can treat the branch as a let variable??
+    int id = internal_let_counter + env->method_let_vars_table.at(env->so->get_name()).at(env->cur_method);
+    env->addid(branch->get_name(), new std::pair<std::string, int>("let", id));
+    branch->code(s, env);
+    emit_addiu(SP, SP, 4, s);
+    env->exitscope();
+    emit_beq(SP, SP, branch_success, s);
+  }
+
+  emit_label_def(branch_fail, s);
+  emit_load_address("$t3", CLASSNAMETAB, s);
+  emit_load_imm(T2, 4, s);
+  emit_mul(T2, T1, T2, s);
+  emit_add(A1, "$t3", T2, s);
+  emit_jal("_case_abort", s);
+  emit_label_def(branch_success, s);
 }
 
 void block_class::code(ostream &s, Environment* env) {

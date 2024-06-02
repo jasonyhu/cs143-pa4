@@ -11,6 +11,7 @@
 	.globl	_bool_tag
 	.globl	_string_tag
 	.globl	class_objTab
+	.globl	class_parentTab
 	.globl	Main_protObj
 	.globl	Main_init
 	.globl	String_protObj
@@ -240,6 +241,13 @@ class_objTab:
 	.word	String_init
 	.word	Main_protObj
 	.word	Main_init
+class_parentTab:
+	.word	-2
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
 Object_dispTab:
 	.word	Object.abort
 	.word	Object.type_name
@@ -416,7 +424,6 @@ Main.type_name:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	addiu	$sp $sp 0
 	jr	$ra	
 Main.main:
 	addiu	$sp $sp -12
@@ -430,5 +437,4 @@ Main.main:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	addiu	$sp $sp 0
 	jr	$ra	

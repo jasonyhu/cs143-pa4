@@ -114,7 +114,9 @@ typedef Cases_class *Cases;
 
 #define branch_EXTRAS						\
   void code(ostream&, Environment* env);						\
-  void dump_with_types(ostream& ,int); \
+  void dump_with_types(ostream&, int); \
+  Symbol get_name() { return name; } \
+  Symbol get_type() { return type_decl; } \
   void let_traverse();
 
 #define Expression_EXTRAS					   \

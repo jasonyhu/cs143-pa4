@@ -37,6 +37,7 @@ private:
   void code_select_gc();
   void code_constants();
   void code_class_name_table();
+  void code_class_parent_table();
   void code_class_obj_table();
   std::map<Symbol, std::map<Symbol, int>>  code_disp_tables();
   void code_prot_objs();
@@ -134,4 +135,5 @@ public:
   Symbol cur_method;
   std::map<Symbol, std::map<Symbol, int>> method_ids;
   std::map<Symbol, std::map<Symbol, int>> method_let_vars_table;
+  std::map<Symbol, int> class_tags;
 };
