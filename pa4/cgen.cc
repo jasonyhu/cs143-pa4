@@ -528,7 +528,7 @@ void CgenClassTable::code_global_data()
   str << GLOBAL << CLASSOBJTAB << std::endl;
   for (CgenNodeP nd : nds) {
     str << GLOBAL << nd->get_name() << PROTOBJ_SUFFIX << std::endl;
-    str << GLOBAL << nd->get_name() << "_init" << std::endl;
+    str << GLOBAL << nd->get_name() << CLASSINIT_SUFFIX << std::endl;
   }
 
   //
