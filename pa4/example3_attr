@@ -11,6 +11,7 @@
 	.globl	_bool_tag
 	.globl	_string_tag
 	.globl	class_objTab
+	.globl	class_parentTab
 	.globl	Mom_protObj
 	.globl	Mom_init
 	.globl	Parent_protObj
@@ -271,6 +272,15 @@ class_objTab:
 	.word	Parent_init
 	.word	Mom_protObj
 	.word	Mom_init
+class_parentTab:
+	.word	-2
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	6
 Object_dispTab:
 	.word	Object.abort
 	.word	Object.type_name
@@ -409,6 +419,7 @@ Int_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -424,6 +435,7 @@ Bool_init:
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $zero
+	sw	$a0 12($s0)
 	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
@@ -445,6 +457,7 @@ String_init:
 	sw	$a0 12($s0)
 	move	$a0 $zero
 	sw	$a0 16($s0)
+	sw	$a0 16($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -463,7 +476,9 @@ Main_init:
 	jal	Object.copy
 	jal	IO_init
 	sw	$a0 12($s0)
+	sw	$a0 12($s0)
 	move	$a0 $zero
+	sw	$a0 16($s0)
 	sw	$a0 16($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
@@ -514,6 +529,7 @@ Mom_init:
 	sw	$a0 16($s0)
 	move	$a0 $zero
 	sw	$a0 20($s0)
+	sw	$a0 20($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -533,9 +549,7 @@ Main.main:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
-	la	$a0 Mom_protObj
-	jal	Object.copy
-	jal	Mom_init
+	lw	$a0 16($s0)
 	bne	$a0 $zero label0
 	la	$a0 str_const0
 	li	$t1 5
@@ -546,38 +560,12 @@ label0:
 	jalr		$t1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	la	$a0 IO_protObj
-	jal	Object.copy
-	jal	IO_init
+	lw	$a0 12($s0)
 	bne	$a0 $zero label1
 	la	$a0 str_const0
 	li	$t1 5
 	jal	_dispatch_abort
 label1:
-	lw	$t1 8($a0)
-	lw	$t1 16($t1)
-	jalr		$t1
-	la	$a0 Mom_protObj
-	jal	Object.copy
-	jal	Mom_init
-	bne	$a0 $zero label2
-	la	$a0 str_const0
-	li	$t1 6
-	jal	_dispatch_abort
-label2:
-	lw	$t1 8($a0)
-	lw	$t1 16($t1)
-	jalr		$t1
-	sw	$a0 0($sp)
-	addiu	$sp $sp -4
-	la	$a0 IO_protObj
-	jal	Object.copy
-	jal	IO_init
-	bne	$a0 $zero label3
-	la	$a0 str_const0
-	li	$t1 6
-	jal	_dispatch_abort
-label3:
 	lw	$t1 8($a0)
 	lw	$t1 16($t1)
 	jalr		$t1

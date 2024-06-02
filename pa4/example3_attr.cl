@@ -2,8 +2,7 @@ class Main {
     a: IO <- new IO;
     b: Mom;
     main():IO {{
-        (new IO).out_int((new Mom).printB());
-        (new IO).out_int((new Mom).printA());
+        a.out_int(b.printB());
     }
     };
 };

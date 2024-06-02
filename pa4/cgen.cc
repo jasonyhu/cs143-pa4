@@ -816,6 +816,7 @@ Environment CgenClassTable::code_inits() {
     std::vector<attr_class*> attribs = nd->get_all_attrs();
     env.attr_counter = 3;
     for (attr_class* attrib : attribs) {
+      // TODO: default intiializations for classes (and default assignments)
       int id = nd->get_attr_ids().at(attrib->get_name());
       // ALEX: modified, see github for more info
       std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
@@ -833,9 +834,7 @@ Environment CgenClassTable::code_inits() {
           emit_load_string(ACC, i, str);
         }
       }
-      if (attrib->get_type() == Str || attrib->get_type() == Int || attrib->get_type() == Bool) {
-        emit_store(ACC, id + 3, SELF, str);
-      }
+      emit_store(ACC, id + 3, SELF, str);
       
     }
     emit_move(ACC, SELF, str);
@@ -1266,6 +1265,7 @@ void object_class::let_traverse() {
 //*****************************************************************
 
 void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
+  // todo: method params are being mixed with let_class (scope issue?)
   emit_method_ref(nd->get_name(), name, s);
   s << LABEL;
   arg_count = 0;
@@ -1492,7 +1492,7 @@ void typcase_class::code(ostream &s, Environment* env) {
   emit_load("$t3", 0, "$t3", s);
 
   emit_beq(T1, T1, parent_loop, s);
-
+  int counter = 0;
   for (Symbol branch_type : branch_types) {
     int l = branch_labels[branch_type];
     int tag = class_tags[branch_type];
@@ -1502,12 +1502,11 @@ void typcase_class::code(ostream &s, Environment* env) {
     emit_push(ACC, s);
     env->enterscope();
 
-    // can we can treat the branch as a let variable??
-    int id = internal_let_counter + env->method_let_vars_table.at(env->so->get_name()).at(env->cur_method);
-    env->addid(branch->get_name(), new std::pair<std::string, int>("let", id));
+    env->addid(branch->get_name(), new std::pair<std::string, int>("param", counter));
     branch->code(s, env);
     emit_addiu(SP, SP, 4, s);
     env->exitscope();
+    counter++;
     emit_beq(SP, SP, branch_success, s);
   }
 
