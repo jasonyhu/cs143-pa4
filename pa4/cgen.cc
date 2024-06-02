@@ -835,6 +835,10 @@ Environment CgenClassTable::code_inits() {
       }
       if (attrib->get_type() == Str || attrib->get_type() == Int || attrib->get_type() == Bool) {
         emit_store(ACC, id + 3, SELF, str);
+        if (cgen_Memmgr == 1) {
+            emit_addiu(A1, SELF, 4 * (id + 3), str);
+            emit_gc_assign(str);
+        }
       }
       
     }
@@ -1315,14 +1319,22 @@ void assign_class::code(ostream &s, Environment* env) {
   id = env->lookup(name)->second;
   if (env->lookup(name)->first == "param") {
     emit_store(ACC, id, FP, s);
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, FP, 4 * id, s);
+      emit_gc_assign(s);
+    }
   } else if (env->lookup(name)->first == "attr") {
     emit_store(ACC, id + 3, SELF, s);
-    if (cgen_Memmgr > 0) {
-      // todo: add addiu operaiton
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, SELF, 4 * (id + 3), s);
       emit_gc_assign(s);
     }
   } else if (env->lookup(name)->first == "letvar") {
     emit_store(ACC, id, FP, s);
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, FP, 4 * id, s);
+      emit_gc_assign(s);
+    }
   } 
 }
 
@@ -1435,7 +1447,6 @@ void loop_class::code(ostream &s, Environment* env) {
   emit_move(ACC, ZERO, s);
 }
 
-// TODO
 void typcase_class::code(ostream &s, Environment* env) {
   expr->code(s, env);
   emit_bne(ACC, ZERO, label, s);
@@ -1733,7 +1744,6 @@ void no_expr_class::code(ostream &s, Environment* env) {
 }
 
 void object_class::code(ostream &s, Environment* env) {
-  // TODO: map object identifier to environment?
   CgenNodeP cur_class_node; 
   Symbol cur_class = env->get_so()->get_name();
   for (CgenNodeP nd : env->nds) {
@@ -1751,14 +1761,22 @@ void object_class::code(ostream &s, Environment* env) {
   }
   if (env->lookup(name)->first == "param") {
     emit_load(ACC, id, FP, s);
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, FP, 4 * id, s);
+      emit_gc_assign(s);
+    }
   } else if (env->lookup(name)->first == "attr") {
     emit_load(ACC, id + 3, SELF, s);
-    if (cgen_Memmgr > 0) {
-      // todo: add addiu operation and do this for param and letvar
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, SELF, 4 * (id + 3), s);
       emit_gc_assign(s);
     }
   } else if (env->lookup(name)->first == "letvar") {
      emit_load(ACC, id, FP, s);
+    if (cgen_Memmgr == 1) {
+      emit_addiu(A1, FP, 4 * id, s);
+      emit_gc_assign(s);
+    }
   } 
 }
 
