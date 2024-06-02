@@ -45,7 +45,7 @@ class Main inherits IO {
    main() : Object {
       {
 	 (new A).out_a();
-	 --(new B).out_b();
+	 (new B).out_b();
 	 (new C).out_c();
 	 (new D).out_d();
 	 out_string("Done.\n");

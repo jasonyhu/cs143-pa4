@@ -1,6 +1,6 @@
 class Main {
   	var : String <- "hello\n";
-    main(): String {
-        var
+    main(): IO {
+        (new IO).out_string(var)
     };
 };

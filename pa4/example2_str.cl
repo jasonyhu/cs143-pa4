@@ -5,6 +5,6 @@
 
 class Main {
   type_name():String { "Main" };
-  main():String { "Abc" };
+  main():IO { (new IO).out_string(type_name()) };
 };
 

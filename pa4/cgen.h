@@ -136,4 +136,5 @@ public:
   std::map<Symbol, std::map<Symbol, int>> method_ids;
   std::map<Symbol, std::map<Symbol, int>> method_let_vars_table;
   std::map<Symbol, int> class_tags;
+  int attr_counter;
 };

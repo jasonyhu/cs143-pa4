@@ -399,6 +399,7 @@ Int_init:
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $zero
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -414,6 +415,7 @@ Bool_init:
 	move	$s0 $a0
 	jal	Object_init
 	move	$a0 $zero
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -430,7 +432,9 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	sw	$a0 12($s0)
 	move	$a0 $zero
+	sw	$a0 16($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -447,6 +451,7 @@ Main_init:
 	jal	IO_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	sw	$a0 12($s0)
 	move	$a0 $s0
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
@@ -460,7 +465,7 @@ Main.pal:
 	sw	$ra 4($sp)
 	addiu	$fp $sp 16
 	move	$s0 $a0
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label0
 	la	$a0 str_const0
 	li	$t1 3
@@ -483,7 +488,7 @@ label0:
 	la	$a0 bool_const1
 	b	label2
 label1:
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label3
 	la	$a0 str_const0
 	li	$t1 5
@@ -512,7 +517,7 @@ label4:
 	la	$a0 int_const1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label6
 	la	$a0 str_const0
 	li	$t1 7
@@ -523,7 +528,7 @@ label6:
 	jalr		$t1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label7
 	la	$a0 str_const0
 	li	$t1 7
@@ -547,7 +552,7 @@ label7:
 	la	$a0 int_const1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label8
 	la	$a0 str_const0
 	li	$t1 7
@@ -567,7 +572,7 @@ label8:
 	la	$a0 int_const1
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label11
 	la	$a0 str_const0
 	li	$t1 8
@@ -588,7 +593,7 @@ label11:
 	sw	$t1 12($a0)
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
-	lw	$a0 12($fp)
+	lw	$a0 0($fp)
 	bne	$a0 $zero label12
 	la	$a0 str_const0
 	li	$t1 8
@@ -617,10 +622,10 @@ label2:
 	lw	$fp 12($sp)
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
-	addiu	$sp $sp 12
-	addiu	$sp $sp 4
+	addiu	$sp $sp 16
 	jr	$ra	
 	move	$a0 $zero
+	sw	$a0 16($s0)
 Main.main:
 	addiu	$sp $sp -12
 	sw	$fp 12($sp)
@@ -699,5 +704,4 @@ label18:
 	lw	$s0 8($sp)
 	lw	$ra 4($sp)
 	addiu	$sp $sp 12
-	addiu	$sp $sp 0
 	jr	$ra	

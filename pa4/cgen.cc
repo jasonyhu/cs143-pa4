@@ -814,13 +814,14 @@ Environment CgenClassTable::code_inits() {
       str << std::endl;
     }
     std::vector<attr_class*> attribs = nd->get_all_attrs();
-    
+    env.attr_counter = 3;
     for (attr_class* attrib : attribs) {
       int id = nd->get_attr_ids().at(attrib->get_name());
       // ALEX: modified, see github for more info
       std::pair<std::string, int>* value = new std::pair<std::string, int>("attr", id);
       env.addid(attrib->get_name(), value);
-      attrib->get_init()->code(str, &env);
+      attrib->code(str, nd, &env);
+      env.attr_counter++;
       if (attrib->get_type() == Str) {
         emit_store(ACC, id + 3, SELF, str);
       } else if (attrib->get_type() == Int) {
@@ -1291,6 +1292,7 @@ void method_class::code(ostream &s, CgenNodeP nd, Environment* env) {
 // do we need to do anything here? i don't think so -- jason
 void attr_class::code(ostream &s, CgenNodeP nd, Environment* env) {
   init->code(s, env);
+  emit_store(ACC, env->attr_counter, SELF, s);
 }
 
 // TODO
@@ -1312,7 +1314,7 @@ void assign_class::code(ostream &s, Environment* env) {
       emit_gc_assign(s);
     }
   } else if (env->lookup(name)->first == "letvar") {
-    emit_load(ACC, id, SP, s);
+    emit_load(ACC, id, FP, s);
   } 
 }
 
@@ -1518,33 +1520,18 @@ void block_class::code(ostream &s, Environment* env) {
 
 // TODO
 void let_class::code(ostream &s, Environment* env) {
-  // add single let to scope
   env->enterscope();
   int id = internal_let_counter + env->method_let_vars_table.at(env->so->get_name()).at(env->cur_method);
   std::pair<std::string, int>* val = new std::pair<std::string, int>("letvar", id);
   env->addid(identifier, val);
   internal_let_counter++;
-
-  init->code(s, env);
-  // emit_load_address("$s1", ACC, s);
-  body->code(s, env);
-  // emit_addiu(SP, SP, 4, s);
-  // init->code(s, env);
   
+  init->code(s, env);
+  emit_store(ACC, id, FP, s);
+  
+  body->code(s, env);
   internal_let_counter = 0;
   env->exitscope();
-  // // todo: enter a new scope into the environment, then add all of the new offsets for the formal parameters
-  // env->enterscope();
-  // // todo: not sure if let_counter + arg_count is right
-  // emit_push(ACC, s);
-  // int id = let_counter // + total_lets;
-  // std::pair<std::string, int>* val = new std::pair<std::string, int>("letvar", id + 1);
-  // env->addid(identifier, val);
-  // let_counter++;
-  // emit_store("s1", id, s);
-  // body->code(s, env);
-  // emit_load(s1, id, s);
-  // env->exitscope();
 }
 
 void plus_class::code(ostream &s, Environment* env) {
@@ -1751,9 +1738,8 @@ void object_class::code(ostream &s, Environment* env) {
       // todo: add addiu operation and do this for param and letvar
       emit_gc_assign(s);
     }
-    emit_load(ACC, id + 3, SELF, s);
   } else if (env->lookup(name)->first == "letvar") {
-     emit_load(ACC, id + 1, SP, s);
+     emit_load(ACC, id, FP, s);
   } 
 }
 
