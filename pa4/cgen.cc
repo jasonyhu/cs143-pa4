@@ -1376,7 +1376,6 @@ void static_dispatch_class::code(ostream &s, Environment* env) {
 }
 
 void dispatch_class::code(ostream &s, Environment* env) {
-  env->enterscope();
   for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
     actual->nth(i)->code(s, env);
     // env->addid(formals->nth(i)->get_name(), &std::make_pair("param", arg_count + 2));
