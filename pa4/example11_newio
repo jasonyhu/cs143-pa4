@@ -11,6 +11,7 @@
 	.globl	_bool_tag
 	.globl	_string_tag
 	.globl	class_objTab
+	.globl	class_parentTab
 	.globl	Main_protObj
 	.globl	Main_init
 	.globl	D_protObj
@@ -344,6 +345,17 @@ class_objTab:
 	.word	D_init
 	.word	Main_protObj
 	.word	Main_init
+class_parentTab:
+	.word	-2
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	5
+	.word	1
+	.word	7
+	.word	1
 Object_dispTab:
 	.word	Object.abort
 	.word	Object.type_name
@@ -544,6 +556,7 @@ String_init:
 	jal	Object_init
 	move	$a0 $zero
 	sw	$a0 12($s0)
+	la	$a0 int_const0
 	sw	$a0 12($s0)
 	move	$a0 $zero
 	sw	$a0 16($s0)
